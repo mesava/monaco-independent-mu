@@ -1,0 +1,22 @@
+name: Monaco Patient material LUT
+lut_type: Patient
+quantity: mass_density_g_cm3
+
+# Ordered transcription of the supplied materials_LUT_Patient.json.
+# Equal thresholds and repeated materials are preserved deliberately.
+entries:
+  - [DryAir, 0.0]
+  - [DryAir, 0.002]
+  - [MuscleSkeletalIcrp, 0.82]
+  - [AdiposeTissueICRP, 0.91]
+  - [AdiposeTissueICRP, 0.95]
+  - [MuscleSkeletalIcrp, 1.04]
+  - [MuscleSkeletalIcrp, 1.08]
+  - [BoneCorticalIcrp, 1.85]
+  - [BoneCorticalIcrp, 3.0]
+  - [Titanium, 3.0]
+  - [Titanium, 5.0]
+  - [StainlessSteel316, 5.0]
+  - [StainlessSteel316, 9.0]
+  - [Lead, 9.0]
+  - [Lead, 12.0]
