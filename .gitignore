@@ -1,0 +1,45 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+dist/
+build/
+*.egg-info/
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Patient / clinical data
+*.dcm
+*.DCM
+*.dicom
+*.zip
+*.rar
+*.7z
+data/raw/
+data/patients/
+data/clinical/
+results/patient_*/
+
+# Monte Carlo large/binary outputs
+*.egsphant
+*.3ddose
+*.egslog
+*.egsdat
+*.egsphsp*
+*.IAEAphsp
+*.IAEAheader
+
+# Local configuration / secrets
+.env
+.env.*
+secrets/
+local/
