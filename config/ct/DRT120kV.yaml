@@ -2,7 +2,12 @@ name: DICOM3.DRT120kV
 tube_voltage_kv: 120
 quantity: relative_electron_density
 interpolation: linear
+
+# Safety mode of the independent engine:
 out_of_range_default: raise
+
+# Monaco pMC documented behaviour outside the CT-to-ED table:
+monaco_out_of_range: clip_to_endpoint
 
 points:
   - [-1000, 0.001]
