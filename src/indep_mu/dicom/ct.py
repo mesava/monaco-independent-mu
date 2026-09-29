@@ -44,19 +44,27 @@ class CtSeries:
     hu: np.ndarray
     geometry: CtGeometry
     slice_positions_mm: np.ndarray
+    image_positions_patient_mm: np.ndarray
     sop_instance_uids: tuple[str, ...]
 
     def calibration_range_summary(
         self,
         hu_min: float,
         hu_max: float,
+        *,
+        mask: np.ndarray | None = None,
     ) -> dict[str, int | float]:
-        below = self.hu < hu_min
-        above = self.hu > hu_max
+        values = self.hu if mask is None else self.hu[np.asarray(mask, dtype=bool)]
+        if values.size == 0:
+            raise ValueError("Calibration summary mask contains no voxels.")
+
+        below = values < hu_min
+        above = values > hu_max
         return {
-            "voxel_count": int(self.hu.size),
-            "hu_observed_min": float(np.min(self.hu)),
-            "hu_observed_max": float(np.max(self.hu)),
+            "voxel_count": int(values.size),
+            "hu_observed_min": float(np.min(values)),
+            "hu_observed_max": float(np.max(values)),
+            "hu_observed_mean": float(np.mean(values)),
             "below_calibration_count": int(np.count_nonzero(below)),
             "above_calibration_count": int(np.count_nonzero(above)),
         }
@@ -74,9 +82,9 @@ def _as_float_tuple(value: Iterable[float], expected_length: int) -> tuple[float
 def _slice_normal(
     orientation: tuple[float, float, float, float, float, float],
 ) -> np.ndarray:
-    row = np.asarray(orientation[:3], dtype=np.float64)
-    column = np.asarray(orientation[3:], dtype=np.float64)
-    normal = np.cross(row, column)
+    column_index_direction = np.asarray(orientation[:3], dtype=np.float64)
+    row_index_direction = np.asarray(orientation[3:], dtype=np.float64)
+    normal = np.cross(column_index_direction, row_index_direction)
     norm = float(np.linalg.norm(normal))
     if norm == 0:
         raise ValueError("Invalid ImageOrientationPatient: zero slice normal.")
@@ -185,6 +193,13 @@ def load_ct_series(
     positions = np.asarray(
         [_slice_coordinate(ds, normal) for ds in ordered], dtype=np.float64
     )
+    image_positions = np.asarray(
+        [
+            _as_float_tuple(ds.ImagePositionPatient, 3)
+            for ds in ordered
+        ],
+        dtype=np.float64,
+    )
 
     if len(positions) < 2:
         raise ValueError("At least two CT slices are required for a 3D volume.")
@@ -225,8 +240,8 @@ def load_ct_series(
 
     hu = np.stack(hu_slices, axis=0)
 
-    first_position = _as_float_tuple(ordered[0].ImagePositionPatient, 3)
-    last_position = _as_float_tuple(ordered[-1].ImagePositionPatient, 3)
+    first_position = tuple(float(x) for x in image_positions[0])
+    last_position = tuple(float(x) for x in image_positions[-1])
 
     patient_position = getattr(reference, "PatientPosition", None)
     kvp_value = getattr(reference, "KVP", None)
@@ -237,8 +252,8 @@ def load_ct_series(
         pixel_spacing_mm=(float(pixel_spacing[0]), float(pixel_spacing[1])),
         slice_spacing_mm=slice_spacing,
         image_orientation_patient=tuple(float(x) for x in orientation),
-        first_image_position_patient_mm=tuple(float(x) for x in first_position),
-        last_image_position_patient_mm=tuple(float(x) for x in last_position),
+        first_image_position_patient_mm=first_position,
+        last_image_position_patient_mm=last_position,
         patient_position=str(patient_position) if patient_position else None,
         frame_of_reference_uid=frame_uid,
         series_instance_uid=series_uid,
@@ -249,5 +264,6 @@ def load_ct_series(
         hu=hu,
         geometry=geometry,
         slice_positions_mm=positions,
+        image_positions_patient_mm=image_positions,
         sop_instance_uids=tuple(sop_uids),
     )
