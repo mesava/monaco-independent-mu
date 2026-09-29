@@ -38,15 +38,13 @@ class CtCalibration:
     ) -> np.ndarray:
         """Convert HU to RED using linear interpolation.
 
-        Parameters
-        ----------
-        hu_values:
-            HU array.
-        out_of_range:
-            "raise" (default) rejects values outside the calibrated interval.
-            "clip" clips HU to the nearest calibration endpoint.
+        out_of_range='raise' rejects values outside the measured calibration
+        interval. out_of_range='clip' reproduces Monaco pMC endpoint
+        behaviour: HU below/above the CT-to-ED table receives the
+        minimum/maximum RED respectively.
 
-        No extrapolation is performed silently.
+        The caller must choose clipping explicitly so the independent QA
+        safety layer can still report out-of-range CT values.
         """
         values = np.asarray(hu_values, dtype=np.float64)
 
