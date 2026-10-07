@@ -48,3 +48,15 @@ DICOM control points
 
 и позволяет позже сравнить planned sequence с Elekta delivery logs/iCOM при
 валидации динамической модели.
+
+
+## Нормативные ссылки DICOM
+
+- DICOM PS3.3, C.8.8.14.5 — Control Point Sequence:
+  https://dicom.nema.org/medical/dicom/current/output/chtml/part03/sect_C.8.8.14.5.html
+- DICOM PS3.3, C.8.8.14.8 — Machine Rotations:
+  https://dicom.nema.org/medical/dicom/current/output/chtml/part03/sect_C.8.8.14.8.html
+
+Особенно важно положение C.8.8.14.5: DICOM не задаёт поведение machine
+parameters между двумя control points. Поэтому interpolation policy является
+частью независимой delivery model и должна валидироваться отдельно.
