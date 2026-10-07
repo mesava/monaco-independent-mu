@@ -9,6 +9,7 @@ from indep_mu.dicom.ct import load_ct_series
 from indep_mu.dicom.plan_validation import run_plan_preflight
 from indep_mu.dicom.rtplan import load_rtplan
 from indep_mu.dicom.rtstruct import list_rtstruct_rois
+from indep_mu.montecarlo.egsnrc_backend import EgsnrcReferenceBackend
 from indep_mu.patient_model.hu_red import DRT120KV
 from indep_mu.workflow.patient_build import build_patient_artifacts
 from indep_mu.workflow.preflight import run_transport_preflight
@@ -17,6 +18,61 @@ from indep_mu.workflow.preflight import run_transport_preflight
 @click.group()
 def main() -> None:
     """Независимая проверка MU и дозы для Monaco."""
+
+
+@main.command("mc-env")
+@click.option("--beamnrc", default="beamnrc", show_default=True)
+@click.option("--dosxyznrc", default="dosxyznrc", show_default=True)
+@click.option(
+    "--hen-house",
+    type=click.Path(file_okay=False, path_type=Path),
+)
+@click.option(
+    "--egs-home",
+    type=click.Path(file_okay=False, path_type=Path),
+)
+def check_mc_environment(
+    beamnrc: str,
+    dosxyznrc: str,
+    hen_house: Path | None,
+    egs_home: Path | None,
+) -> None:
+    """Проверить доступность reference EGSnrc backend."""
+
+    backend = EgsnrcReferenceBackend(
+        beamnrc_executable=beamnrc,
+        dosxyznrc_executable=dosxyznrc,
+        hen_house=hen_house,
+        egs_home=egs_home,
+    )
+    errors = backend.validate_environment()
+
+    click.echo(f"backend:        {backend.capabilities.backend_id}")
+    click.echo(
+        "BEAMnrc:        "
+        + (
+            str(backend.resolved_beamnrc())
+            if backend.resolved_beamnrc() is not None
+            else "<not found>"
+        )
+    )
+    click.echo(
+        "DOSXYZnrc:      "
+        + (
+            str(backend.resolved_dosxyznrc())
+            if backend.resolved_dosxyznrc() is not None
+            else "<not found>"
+        )
+    )
+    click.echo(f"GPU:            {backend.capabilities.supports_gpu}")
+
+    if errors:
+        click.echo("")
+        for item in errors:
+            click.echo(f"ERROR: {item}")
+        raise click.ClickException("EGSnrc environment is not ready.")
+
+    click.echo("status:         READY")
 
 
 @main.command("rois")
