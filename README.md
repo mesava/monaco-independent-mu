@@ -73,7 +73,7 @@ multi-ROI        gamma/DVH
 |---|---|
 | **M1 — Patient model** | HU→RED→ρ→MaterialMix, PEGSless, egsphant, sensitivity framework реализованы |
 | **M2 — RTPLAN/VMAT** | BeamMeterset, CP inheritance, jaws/MLC, CMW и delivery segments реализованы |
-| **M3 — Versa HD/Agility** | commissioning data model, TPS reference, machine/energy resolution и geometry readiness реализованы; physical head model ещё валидируется |
+| **M3 — Versa HD/Agility** | commissioning data model, TPS reference, machine/energy resolution, IEC bank identity и research rounded-tip transform реализованы; physical head model ещё валидируется |
 | **M4 — Monte Carlo** | transport abstraction, SYNCMLCE/SYNCJAWS/source21 layers, 3ddose и absolute-normalization infrastructure реализованы; полноценный commissioned transport model ещё не закрыт |
 | **M5 — Equivalent MU** | multi-ROI equivalent-MU check, patient-coordinate spherical ROI и ±3%/±5% infrastructure реализованы |
 | **M6 — 3D comparison** | RTDOSE/MC alignment, ΔD, DVH и explicit gamma wrapper реализованы |
@@ -83,10 +83,12 @@ multi-ROI        gamma/DVH
 До первого полноценного независимого расчёта клинического плана должны быть
 закрыты четыре принципиальных узла:
 
-1. **Agility rounded-tip geometry.** Нужен валидированный transform между
-   DICOM leaf position и физической геометрией rounded leaf end в MC.
-2. **Source 21 orientation.** Coplanar HFS reference проверяется, но общий
-   non-coplanar IEC/DICOM → DOSXYZnrc transform ещё не объявлен production-ready.
+1. **Agility rounded-tip geometry.** Реализованы analytic tangent transform,
+   IEC bank identity и research-only SYNCMLCE mapper; остаётся end-to-end
+   validation на реальной SYNCMLCE geometry с eccentric tip/leaf-bank tilt.
+2. **Source 21 orientation.** Реализован HFS IEC/DICOM → DOSXYZnrc transform
+   Zhan/Jiang/Osei с non-coplanar regression tests; остаётся end-to-end
+   transport validation в DOSXYZnrc/BEAMnrc.
 3. **Независимая absolute calibration.** Monaco reference doses за 100 MU
    хранятся только как TPS benchmark; MC нормируется по измеренной dose/MU.
 4. **Transport commissioning.** Open fields → MLC stress tests → IMRT → VMAT
