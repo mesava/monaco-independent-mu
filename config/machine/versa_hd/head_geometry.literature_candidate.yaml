@@ -1,0 +1,43 @@
+# RESEARCH-ONLY Agility geometry candidate assembled from public literature.
+#
+# This file is NOT a commissioned/production head model.
+# Values are included to make assumptions explicit and testable.
+#
+# Public geometric basis:
+# - Agility leaf thickness along beam direction: 9.0 cm
+# - source-to-collimator distance at center of curvature: 34.93 cm
+# - rounded-tip radius: 17 cm
+# - eccentric center: 3.75 cm from upper leaf surface, 5.25 cm from lower
+# - leaf-bank tilt: approximately 9 mrad (0.515 deg)
+#
+# Derived research values:
+# zmin = 34.93 - 3.75 = 31.18 cm
+# zmax = 34.93 + 5.25 = 40.18 cm
+#
+# Bank identity and full Y-jaw thickness remain deliberately unset.
+
+machine_model_id: VERSA_HD
+
+mlc:
+  end_type: rounded
+  zmin_cm: 31.18
+  zmax_cm: 40.18
+  leaf_radius_cm: 17.0
+  cylinder_axis_z_cm: 34.93
+  leaf_bank_tilt_rad: 0.009
+  negative_bank: null
+
+jaws:
+  - device_type: ASYMY
+    # Public Monaco technical documentation places the top of the IEC Y-jaw
+    # at about 43.2 cm from target/source. Full physical thickness is not
+    # established here, so zmax remains null.
+    zmin_cm: 43.2
+    zmax_cm: null
+    negative_bank: null
+
+evidence:
+  - "Hernandez et al., Medical Physics 2022, DOI 10.1002/mp.16016"
+  - "Gholampourkashi et al., JACMP 2019, DOI 10.1002/acm2.12485"
+  - "Ohira et al., In Vivo 2020, DOI 10.21873/invivo.12050"
+  - "Monaco Dose Calculation Technical Reference: Agility Y-jaw top ~43.2 cm"
