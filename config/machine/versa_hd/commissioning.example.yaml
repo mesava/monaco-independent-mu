@@ -1,0 +1,27 @@
+# Шаблон commissioning dataset.
+#
+# ВАЖНО:
+# delivered_mu обязательны. Проект никогда не интерпретирует measured_dose_gy
+# как Gy/MU или Gy/100MU по умолчанию.
+#
+# Это шаблон, а не клинически утверждённый dataset.
+
+machine_model_id: VERSA_HD
+
+energies:
+  - energy_model_id: 6MV
+    calibration:
+      field:
+        x_mm: 100
+        y_mm: 100
+      ssd_mm: 900
+      depth_mm: 100
+      delivered_mu: 100       # ЗАМЕНИТЬ/ПОДТВЕРДИТЬ по протоколу измерения
+      measured_dose_gy: 1.0   # ПРИМЕР, не клиническое значение
+
+    output_factors:
+      - field: {x_mm: 100, y_mm: 100}
+        output_factor: 1.0
+
+    pdd_curves: []
+    profiles: []
