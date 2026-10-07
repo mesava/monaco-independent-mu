@@ -16,6 +16,7 @@ from pydicom.uid import (
 
 from indep_mu.patient_model.egsphant import read_egsphant
 from indep_mu.workflow.patient_build import build_patient_artifacts
+from indep_mu.workflow.patient_diagnostics import analyze_ct_derived_patient
 
 
 def _base_dataset(path: Path, sop_class_uid: str, modality: str) -> FileDataset:
@@ -314,3 +315,27 @@ def test_build_patient_artifacts_with_explicit_ct_derived_mask(
     derived = summary["patient_mask"]["ct_derived"]
     assert derived["validation_status"] == "RESEARCH_ONLY"
     assert derived["seed_patient_mm"] == [1.5, 1.5, 2.5]
+
+
+
+def test_ct_derived_patient_diagnostics_on_synthetic_case(tmp_path: Path) -> None:
+    dicom = tmp_path / "dicom"
+    dicom.mkdir()
+    _build_case(dicom)
+
+    result = analyze_ct_derived_patient(
+        dicom,
+        threshold_hu=-500.0,
+        closing_iterations=0,
+    )
+
+    assert result.threshold_hu == -500.0
+    assert result.closing_iterations == 0
+    assert result.final_voxel_count > 0
+    assert result.volume_cm3 > 0.0
+    assert result.body_hu_min >= -1024.0
+    assert result.body_hu_max <= 3071.0
+    assert result.below_calibration_count >= 0
+    assert result.above_calibration_count >= 0
+    assert result.density_min_g_cm3 >= 0.0
+    assert result.density_max_g_cm3 > 0.0
