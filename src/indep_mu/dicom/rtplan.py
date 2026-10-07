@@ -72,6 +72,10 @@ class Beam:
     beam_meterset_mu: float
     fluence_mode: str | None
     fluence_mode_id: str | None
+    number_of_wedges: int
+    number_of_compensators: int
+    number_of_boli: int
+    number_of_blocks: int
     device_definitions: tuple[BeamLimitingDeviceDefinition, ...]
     control_points: tuple[ControlPoint, ...]
 
@@ -130,6 +134,15 @@ def _optional_float(dataset: pydicom.dataset.Dataset, name: str) -> float | None
 def _optional_str(dataset: pydicom.dataset.Dataset, name: str) -> str | None:
     value = getattr(dataset, name, None)
     return None if value is None or str(value) == "" else str(value)
+
+
+def _optional_int(
+    dataset: pydicom.dataset.Dataset,
+    name: str,
+    default: int = 0,
+) -> int:
+    value = getattr(dataset, name, None)
+    return default if value is None or value == "" else int(value)
 
 
 def _optional_float_tuple(
@@ -486,6 +499,10 @@ def _parse_beam(
         beam_meterset_mu=float(beam_meterset_mu),
         fluence_mode=fluence_mode,
         fluence_mode_id=fluence_mode_id,
+        number_of_wedges=_optional_int(beam, "NumberOfWedges"),
+        number_of_compensators=_optional_int(beam, "NumberOfCompensators"),
+        number_of_boli=_optional_int(beam, "NumberOfBoli"),
+        number_of_blocks=_optional_int(beam, "NumberOfBlocks"),
         device_definitions=definitions,
         control_points=control_points,
     )
