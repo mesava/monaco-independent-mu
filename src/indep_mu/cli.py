@@ -8,6 +8,7 @@ from indep_mu.dicom.case import discover_dicom_case
 from indep_mu.dicom.ct import load_ct_series
 from indep_mu.dicom.plan_validation import run_plan_preflight
 from indep_mu.dicom.rtplan import load_rtplan
+from indep_mu.dicom.rtstruct import list_rtstruct_rois
 from indep_mu.patient_model.hu_red import DRT120KV
 from indep_mu.workflow.preflight import run_transport_preflight
 
@@ -15,6 +16,28 @@ from indep_mu.workflow.preflight import run_transport_preflight
 @click.group()
 def main() -> None:
     """Независимая проверка MU и дозы для Monaco."""
+
+
+@main.command("rois")
+@click.argument(
+    "dicom_directory",
+    type=click.Path(exists=True, file_okay=False, path_type=Path),
+)
+def list_rois(dicom_directory: Path) -> None:
+    """Показать ROI из RTSTRUCT без вывода идентификаторов пациента."""
+
+    try:
+        case = discover_dicom_case(dicom_directory)
+        rois = list_rtstruct_rois(case.rtstruct.path)
+    except (ValueError, OSError) as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    if not rois:
+        click.echo("RTSTRUCT does not contain ROI definitions.")
+        return
+
+    for roi in rois:
+        click.echo(f"{roi.roi_number:4d}  {roi.roi_name}")
 
 
 @main.command("inspect")
