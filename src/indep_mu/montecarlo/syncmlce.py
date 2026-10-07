@@ -95,12 +95,15 @@ class ResearchRoundedTipSyncMlceMapper:
     radius_cm: float
     cylinder_axis_z_cm: float
     negative_bank: int
+    projected_edge_shift_mm: float = 0.0
 
     def __post_init__(self) -> None:
         if not np.isfinite(self.sad_mm) or self.sad_mm <= 0:
             raise ValueError("sad_mm must be finite and positive.")
         if self.negative_bank not in {1, 2}:
             raise ValueError("negative_bank must be 1 or 2.")
+        if not np.isfinite(self.projected_edge_shift_mm):
+            raise ValueError("projected_edge_shift_mm must be finite.")
 
         # Validate physical radius/CIL constraints immediately.
         RoundedLeafTipTangentGeometry(
@@ -116,8 +119,15 @@ class ResearchRoundedTipSyncMlceMapper:
             cylinder_axis_z_cm=self.cylinder_axis_z_cm,
         )
 
-        bank1_iso_cm = np.asarray(banks.bank1_mm, dtype=np.float64) / 10.0
-        bank2_iso_cm = np.asarray(banks.bank2_mm, dtype=np.float64) / 10.0
+        shift_cm = self.projected_edge_shift_mm / 10.0
+        bank1_iso_cm = (
+            np.asarray(banks.bank1_mm, dtype=np.float64) / 10.0
+            + shift_cm
+        )
+        bank2_iso_cm = (
+            np.asarray(banks.bank2_mm, dtype=np.float64) / 10.0
+            + shift_cm
+        )
 
         if self.negative_bank == 1:
             negative_edge = bank1_iso_cm
