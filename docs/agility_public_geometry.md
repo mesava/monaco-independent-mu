@@ -1,0 +1,85 @@
+# Публичная геометрия Agility: исследовательский baseline
+
+Для продвижения независимой модели создан отдельный
+`head_geometry.literature_candidate.yaml`.
+
+Он **не является клинически утверждённой геометрией Versa HD**. Цель файла —
+отделить публично подтверждаемые размеры от неизвестных параметров и сделать
+все допущения видимыми.
+
+## Что подтверждается открытой литературой
+
+Hernandez et al. (Medical Physics, 2022) приводит для Agility:
+
+- 160 leaves / 80 pairs;
+- projected leaf width 5 mm at isocenter;
+- leaf thickness 9.0 cm;
+- source-to-collimator distance 34.93 cm, определённую в центре кривизны;
+- rounded-tip radius 17 cm;
+- eccentric rounded tip.
+
+В той же работе центр кривизны описан как расположенный:
+
+- 37.5 mm от верхней поверхности leaf;
+- 52.5 mm от нижней поверхности leaf.
+
+Отсюда для исследовательской геометрии:
+
+```text
+z_center = 34.93 cm
+zmin = 34.93 - 3.75 = 31.18 cm
+zmax = 34.93 + 5.25 = 40.18 cm
+```
+
+Gholampourkashi et al. получил наилучшее согласие с измерениями для
+`LBROT ≈ 9 mrad`; Hernandez et al. цитирует эквивалентное значение около
+0.515°.
+
+Ohira et al. независимо использовал:
+
+- rounded-tip radius 17 cm;
+- leaf thickness 9 cm;
+- tungsten alloy density 18.0 g/cm³;
+- composition 95% W, 3.75% Ni, 1.25% Fe;
+- interleaf air gap 0.009 cm.
+
+Эти material values пока не объявляются единственными правильными: другая
+публикация показала чувствительность transmission к эффективной плотности и
+использовала tuning против измерений.
+
+## Что НЕ считается установленным
+
+Пока остаются заблокированными:
+
+- DICOM bank 1/2 → physical negative/positive Agility bank;
+- точный transform nominal DICOM leaf position → SYNCMLCE cylinder origin;
+- полная геометрия Y-jaws, включая нижнюю поверхность;
+- material density, окончательно выбранная по transmission measurements;
+- остальные proprietary head components для полного Versa HD.
+
+## Почему public model всё равно полезен
+
+Он задаёт независимый starting point для последующей commissioning-driven
+оптимизации. Параметры не должны подгоняться к Monaco dose. Они будут
+проверяться против измеренных:
+
+- PDD;
+- profiles;
+- output factors;
+- MLC transmission;
+- FOURL / alternating leaf patterns;
+- sweeping-gap / dynamic tests.
+
+## Источники
+
+- Hernandez V et al. *Challenges in modeling the Agility multileaf collimator
+  in treatment planning systems and current needs for improvement.* Med Phys.
+  2022. DOI: 10.1002/mp.16016.
+- Gholampourkashi S et al. *Monte Carlo and analytic modeling of an Elekta
+  Infinity linac with Agility MLC.* J Appl Clin Med Phys. 2019.
+  DOI: 10.1002/acm2.12485.
+- Ohira S et al. *Monte Carlo Modeling of the Agility MLC for IMRT and VMAT
+  Calculations.* In Vivo. 2020. DOI: 10.21873/invivo.12050.
+- Paschal HMP et al. *Monte Carlo modeling of the Elekta Versa HD and patient
+  dose calculation with EGSnrc/BEAMnrc.* J Appl Clin Med Phys. 2022.
+  DOI: 10.1002/acm2.13715.
