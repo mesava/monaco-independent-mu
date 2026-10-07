@@ -25,7 +25,7 @@ from .rtplan import (
     RtPlan,
     load_rtplan,
 )
-from .rtstruct import RoiMask, build_roi_mask
+from .rtstruct import RoiDefinition, RoiMask, build_roi_mask, list_rtstruct_rois
 
 __all__ = [
     "Beam",
@@ -43,6 +43,7 @@ __all__ = [
     "DoseGeometry",
     "PlanPreflight",
     "PreflightMessage",
+    "RoiDefinition",
     "RoiMask",
     "RtDose",
     "RtPlan",
@@ -52,5 +53,6 @@ __all__ = [
     "load_ct_series",
     "load_rtdose",
     "load_rtplan",
+    "list_rtstruct_rois",
     "run_plan_preflight",
 ]
