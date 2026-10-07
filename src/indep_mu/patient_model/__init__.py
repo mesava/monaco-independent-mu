@@ -29,6 +29,7 @@ __all__ = [
     "PegslessMediaSet",
     "build_egsphant_geometry",
     "build_patient_model",
+    "derive_external_mask_from_ct",
     "build_pegsless_media_set",
     "discretize_material_blends",
     "evaluate_discretization",
