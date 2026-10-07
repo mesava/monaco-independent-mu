@@ -2,9 +2,11 @@ import numpy as np
 import pytest
 
 from indep_mu.mu_check import (
+    PatientSphericalRoi,
     RectilinearDoseGrid,
     SphericalRoi,
     check_beam_equivalent_mu,
+    spherical_patient_roi_mean_gy,
     spherical_roi_mean,
     trilinear_sample,
 )
@@ -64,3 +66,28 @@ def test_equivalent_mu_flags_tolerance_exceedance() -> None:
     )
     assert result.max_abs_difference_percent == pytest.approx(11.111111111)
     assert not result.within_tolerance
+
+
+
+class _LinearPatientDoseSampler:
+    def sample_patient_points_gy(self, points_patient_mm: np.ndarray) -> np.ndarray:
+        points = np.asarray(points_patient_mm, dtype=np.float64)
+        return 1.0 + 1e-3 * points[:, 0] - 2e-3 * points[:, 1] + 3e-3 * points[:, 2]
+
+
+def test_patient_coordinate_spherical_roi_mean() -> None:
+    roi = PatientSphericalRoi(
+        "ROI1",
+        center_patient_mm=(10.0, -20.0, 30.0),
+        radius_mm=2.5,
+    )
+    result = spherical_patient_roi_mean_gy(
+        _LinearPatientDoseSampler(),
+        roi,
+        samples_per_axis=11,
+    )
+
+    expected = 1.0 + 0.010 + 0.040 + 0.090
+    assert result.mean_dose_gy == pytest.approx(expected, abs=1e-12)
+    assert result.roi.radius_mm == pytest.approx(2.5)
+    assert result.sample_count > 100
