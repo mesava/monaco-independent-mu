@@ -130,3 +130,54 @@ def test_nonuniform_slice_spacing_is_rejected(tmp_path: Path) -> None:
 
     with pytest.raises(ValueError, match="Non-uniform CT slice spacing"):
         load_ct_series(tmp_path)
+
+
+
+def test_requested_series_ignores_unrelated_ct_series(tmp_path: Path) -> None:
+    selected_series = generate_uid()
+    selected_frame = generate_uid()
+    unrelated_series = generate_uid()
+
+    for index, z in enumerate((0.0, 2.5, 5.0)):
+        _write_ct_slice(
+            tmp_path / f"selected_{index}.dcm",
+            series_uid=selected_series,
+            frame_uid=selected_frame,
+            z_mm=z,
+            value=1024 + index,
+        )
+
+    for index, z in enumerate((0.0, 5.0)):
+        _write_ct_slice(
+            tmp_path / f"unrelated_{index}.dcm",
+            series_uid=unrelated_series,
+            frame_uid=generate_uid(),
+            z_mm=z,
+            value=900,
+        )
+
+    ct = load_ct_series(
+        tmp_path,
+        series_instance_uid=selected_series,
+    )
+
+    assert ct.geometry.series_instance_uid == selected_series
+    assert ct.geometry.frame_of_reference_uid == selected_frame
+    assert ct.hu.shape[0] == 3
+
+
+def test_mixed_series_without_explicit_selection_still_fails(tmp_path: Path) -> None:
+    for series_index in range(2):
+        series_uid = generate_uid()
+        frame_uid = generate_uid()
+        for slice_index, z in enumerate((0.0, 2.5)):
+            _write_ct_slice(
+                tmp_path / f"s{series_index}_{slice_index}.dcm",
+                series_uid=series_uid,
+                frame_uid=frame_uid,
+                z_mm=z,
+                value=1024,
+            )
+
+    with pytest.raises(ValueError, match="SeriesInstanceUID"):
+        load_ct_series(tmp_path)
