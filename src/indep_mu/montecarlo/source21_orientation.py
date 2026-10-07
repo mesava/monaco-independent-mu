@@ -12,6 +12,13 @@ def _angular_distance_deg(a: float, b: float) -> float:
     return min(delta, 360.0 - delta)
 
 
+def _normalise_360_deg(value: float, *, tolerance: float = 1e-10) -> float:
+    result = float(np.mod(float(value), 360.0))
+    if abs(result - 360.0) <= tolerance or abs(result) <= tolerance:
+        return 0.0
+    return result
+
+
 @dataclass(frozen=True)
 class ZhanHfsSource21OrientationMapper:
     """DICOM IEC angles -> DOSXYZnrc source-21 angles for HFS geometry.
@@ -105,6 +112,6 @@ class ZhanHfsSource21OrientationMapper:
 
         return Source21Angles(
             theta_deg=float(np.rad2deg(theta)),
-            phi_deg=float(np.mod(np.rad2deg(phi), 360.0)),
-            phicol_deg=float(np.mod(np.rad2deg(phicol), 360.0)),
+            phi_deg=_normalise_360_deg(np.rad2deg(phi)),
+            phicol_deg=_normalise_360_deg(np.rad2deg(phicol)),
         )
