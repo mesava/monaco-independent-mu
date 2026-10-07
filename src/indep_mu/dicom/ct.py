@@ -110,14 +110,20 @@ def _close_tuple(
 def load_ct_series(
     directory: str | Path,
     *,
+    series_instance_uid: str | None = None,
     geometry_tolerance_mm: float = 1e-4,
     spacing_tolerance_mm: float = 1e-3,
 ) -> CtSeries:
     """Load and validate one CT DICOM series from a directory.
 
-    The loader deliberately fails on mixed FrameOfReferenceUID, mixed
-    SeriesInstanceUID, inconsistent matrix/pixel spacing/orientation, duplicate
-    slice locations, or non-uniform slice spacing.
+    When series_instance_uid is supplied, unrelated CT series under the same
+    export directory are ignored. Without it, the loader deliberately fails on
+    mixed SeriesInstanceUID values rather than guessing which CT is clinically
+    referenced.
+
+    The selected series is also checked for mixed FrameOfReferenceUID,
+    inconsistent matrix/pixel spacing/orientation, duplicate slice locations,
+    and non-uniform slice spacing.
 
     Patient names/IDs are intentionally not retained by this data model.
     """
@@ -133,11 +139,22 @@ def load_ct_series(
         except Exception:
             continue
         if getattr(ds, "Modality", None) == "CT":
+            if (
+                series_instance_uid is not None
+                and str(getattr(ds, "SeriesInstanceUID", ""))
+                != str(series_instance_uid)
+            ):
+                continue
             ds.filename = str(path)
             datasets.append(ds)
 
     if not datasets:
-        raise ValueError(f"No CT DICOM instances found under {root}.")
+        if series_instance_uid is None:
+            raise ValueError(f"No CT DICOM instances found under {root}.")
+        raise ValueError(
+            "No CT DICOM instances found for requested SeriesInstanceUID "
+            f"{series_instance_uid!r} under {root}."
+        )
 
     reference = datasets[0]
 
