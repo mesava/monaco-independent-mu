@@ -26,6 +26,10 @@ dev = [
   "mypy>=1.13",
 ]
 
+gamma = [
+  "pymedphys",
+]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 
