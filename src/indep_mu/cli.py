@@ -12,6 +12,7 @@ from indep_mu.dicom.rtplan import load_rtplan
 from indep_mu.dicom.rtstruct import list_rtstruct_rois
 from indep_mu.montecarlo.egsnrc_backend import EgsnrcReferenceBackend
 from indep_mu.patient_model.hu_red import DRT120KV
+from indep_mu.workflow.baseline import validate_case_against_expected
 from indep_mu.workflow.fingerprint import build_technical_case_fingerprint
 from indep_mu.workflow.patient_build import build_patient_artifacts
 from indep_mu.workflow.preflight import run_transport_preflight
@@ -136,6 +137,51 @@ def fingerprint_case(
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(serialized, encoding="utf-8")
     click.echo(str(output))
+
+
+@main.command("validate-baseline")
+@click.argument(
+    "dicom_directory",
+    type=click.Path(exists=True, file_okay=False, path_type=Path),
+)
+@click.argument(
+    "expected_yaml",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+)
+@click.option(
+    "--float-atol",
+    type=float,
+    default=1e-6,
+    show_default=True,
+)
+def validate_baseline(
+    dicom_directory: Path,
+    expected_yaml: Path,
+    float_atol: float,
+) -> None:
+    """Сверить DICOM case с обезличенным validation baseline."""
+
+    try:
+        report = validate_case_against_expected(
+            dicom_directory,
+            expected_yaml,
+            float_atol=float_atol,
+        )
+    except (ValueError, OSError) as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    if report.passed:
+        click.echo("validation baseline: PASS")
+        return
+
+    click.echo("validation baseline: FAIL")
+    for item in report.mismatches:
+        click.echo(
+            f"{item.path}: expected={item.expected!r}, actual={item.actual!r}"
+        )
+    raise click.ClickException(
+        f"{len(report.mismatches)} baseline mismatch(es) detected."
+    )
 
 
 @main.command("build-patient")
