@@ -17,6 +17,12 @@ from .monaco_reference import (
     load_monaco_leaf_model,
     parse_monaco_leaf_model_text,
 )
+from .tps_reference import (
+    TpsReferenceDataset,
+    TpsReferenceDose,
+    TpsReferenceGeometry,
+    load_tps_reference_yaml,
+)
 
 __all__ = [
     "AgilityDicomGeometryReport",
@@ -24,15 +30,19 @@ __all__ = [
     "CommissioningDataset",
     "DepthDoseCurve",
     "EnergyCommissioningData",
-    "FieldSize",
-    "OutputFactorPoint",
-    "ReferenceCalibration",
     "EnergyModel",
+    "FieldSize",
     "MachineModel",
     "MonacoLeafModelReference",
+    "OutputFactorPoint",
+    "ReferenceCalibration",
+    "TpsReferenceDataset",
+    "TpsReferenceDose",
+    "TpsReferenceGeometry",
     "VERSA_HD",
     "load_commissioning_yaml",
     "load_monaco_leaf_model",
+    "load_tps_reference_yaml",
     "parse_monaco_leaf_model_text",
     "resolve_energy_model",
     "validate_agility_dicom_geometry",
