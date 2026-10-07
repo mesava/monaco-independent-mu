@@ -118,6 +118,16 @@ treatment isocenter. Он не является клиническим default �
 Для последующих экспортов добавлена команда `indep-mu fingerprint`, которая
 формирует обезличенный технический fingerprint CT/RTSTRUCT/RTPLAN/RTDOSE.
 
+Для первого реального case также добавлена regression-проверка:
+
+```text
+indep-mu validate-baseline <DICOM_DIR> config/validation/case001.expected.yaml
+```
+
+Она сверяет текущую интерпретацию raw DICOM с зафиксированным обезличенным
+baseline и останавливается при любом изменении уже подтверждённых CT/beam/MU/
+Agility/RTDOSE metadata.
+
 Для M6 также введён обязательный gate физической dose quantity: TPS и
 independent MC должны явно совпадать как dose-to-medium либо dose-to-water.
 По стандартному RTDOSE этот режим не угадывается.
