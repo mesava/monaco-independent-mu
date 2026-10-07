@@ -51,11 +51,18 @@ Ohira et al. независимо использовал:
 
 Пока остаются заблокированными:
 
-- DICOM bank 1/2 → physical negative/positive Agility bank;
-- точный transform nominal DICOM leaf position → SYNCMLCE cylinder origin;
+- end-to-end validation nominal DICOM leaf position → фактическая
+  SYNCMLCE rounded-tip surface; analytic tangent transform уже реализован;
+- знак/применение компенсации field-centre shift от LBROT;
 - полная геометрия Y-jaws, включая нижнюю поверхность;
 - material density, окончательно выбранная по transmission measurements;
 - остальные proprietary head components для полного Versa HD.
+
+DICOM/IEC bank identity теперь не считается неизвестной: DICOM хранит позиции
+в IEC element order 101..1N, 201..2N, а IEC 61217 определяет side 1
+(X1/Y1) как negative-axis side и side 2 (X2/Y2) как positive-axis side.
+На первом реальном Monaco RTPLAN это всё равно будет подтверждено
+sanity-check'ом экспортированных позиций.
 
 ## Почему public model всё равно полезен
 
