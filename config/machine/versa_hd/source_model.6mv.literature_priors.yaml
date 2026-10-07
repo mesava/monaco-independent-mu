@@ -1,0 +1,42 @@
+# Research-only 6 MV source-model priors.
+#
+# These values are literature starting points for commissioning search, not the
+# final source model of the local Versa HD. They must be tuned against local
+# measured PDD/profiles and then independently validated.
+
+energy_model_id: 6MV
+beamnrc_source: ISOURC19
+status: RESEARCH_PRIORS_ONLY
+
+candidates:
+  - id: PASCHAL_VERSA_HD_2022
+    machine_family: Elekta Versa HD
+    electron_energy_mev: 6.4
+    beam_fwhm_x_mm: null
+    beam_fwhm_y_mm: null
+    angular_divergence_deg: null
+    role: machine-family starting point
+    evidence:
+      - "Paschal et al., JACMP 2022, DOI 10.1002/acm2.13715"
+
+  - id: GHOLAMPOURKASHI_INFINITY_2019
+    machine_family: Elekta Infinity / Agility
+    electron_energy_mev: 6.6
+    beam_fwhm_x_mm: 2.1
+    beam_fwhm_y_mm: 1.0
+    angular_divergence_deg: 1.35
+    role: Agility source-shape prior; not machine-specific
+    evidence:
+      - "Gholampourkashi et al., JACMP 2019, DOI 10.1002/acm2.12485"
+
+commissioning_policy:
+  electron_energy:
+    primary_observable: measured PDD
+  beam_fwhm_x:
+    primary_observable: cross-line penumbra/profile
+  beam_fwhm_y:
+    primary_observable: in-line penumbra/profile
+  angular_divergence:
+    primary_observable: profile/field-size dependence
+  absolute_output:
+    primary_observable: independent measured reference dose per MU
