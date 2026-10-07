@@ -10,6 +10,13 @@ from .ct import CtSeries
 
 
 @dataclass(frozen=True)
+class RoiDefinition:
+    roi_number: int
+    roi_name: str
+    frame_of_reference_uid: str | None
+
+
+@dataclass(frozen=True)
 class RoiMask:
     """Rasterized RTSTRUCT ROI on the native CT voxel grid."""
 
@@ -22,6 +29,36 @@ class RoiMask:
     @property
     def voxel_count(self) -> int:
         return int(np.count_nonzero(self.mask))
+
+
+def list_rtstruct_rois(rtstruct_path: str | Path) -> tuple[RoiDefinition, ...]:
+    """List RTSTRUCT ROI definitions without rasterizing contours."""
+
+    rtstruct = pydicom.dcmread(rtstruct_path, stop_before_pixels=True, force=False)
+    if getattr(rtstruct, "Modality", None) != "RTSTRUCT":
+        raise ValueError("Input file is not an RT Structure Set.")
+
+    sequence = getattr(rtstruct, "StructureSetROISequence", None)
+    if not sequence:
+        return ()
+
+    result: list[RoiDefinition] = []
+    seen_numbers: set[int] = set()
+    for item in sequence:
+        number = int(item.ROINumber)
+        if number in seen_numbers:
+            raise ValueError(f"Duplicate ROINumber in RTSTRUCT: {number}.")
+        seen_numbers.add(number)
+        frame = getattr(item, "ReferencedFrameOfReferenceUID", None)
+        result.append(
+            RoiDefinition(
+                roi_number=number,
+                roi_name=str(item.ROIName),
+                frame_of_reference_uid=str(frame) if frame is not None else None,
+            )
+        )
+
+    return tuple(result)
 
 
 def _roi_number_by_name(rtstruct: pydicom.dataset.Dataset, roi_name: str) -> int:
