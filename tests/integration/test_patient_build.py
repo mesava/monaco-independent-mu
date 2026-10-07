@@ -132,11 +132,67 @@ def _write_rtplan(path: Path, *, study_uid: str, struct_uid: str) -> None:
     ds = _base_dataset(path, RTPlanStorage, "RTPLAN")
     ds.StudyInstanceUID = study_uid
     ds.SeriesInstanceUID = generate_uid()
+    ds.RTPlanLabel = "TEST"
+    ds.RTPlanName = "TEST"
 
     ref = Dataset()
     ref.ReferencedSOPClassUID = RTStructureSetStorage
     ref.ReferencedSOPInstanceUID = struct_uid
     ds.ReferencedStructureSetSequence = Sequence([ref])
+
+    device = Dataset()
+    device.RTBeamLimitingDeviceType = "ASYMY"
+    device.NumberOfLeafJawPairs = 1
+    device.SourceToBeamLimitingDeviceDistance = 470.0
+
+    cp0_position = Dataset()
+    cp0_position.RTBeamLimitingDeviceType = "ASYMY"
+    cp0_position.LeafJawPositions = [-20.0, 20.0]
+
+    cp0 = Dataset()
+    cp0.ControlPointIndex = 0
+    cp0.CumulativeMetersetWeight = 0.0
+    cp0.GantryAngle = 0.0
+    cp0.GantryRotationDirection = "NONE"
+    cp0.BeamLimitingDeviceAngle = 0.0
+    cp0.BeamLimitingDeviceRotationDirection = "NONE"
+    cp0.PatientSupportAngle = 0.0
+    cp0.PatientSupportRotationDirection = "NONE"
+    cp0.NominalBeamEnergy = 6.0
+    cp0.IsocenterPosition = [1.5, 1.5, 2.5]
+    cp0.BeamLimitingDevicePositionSequence = Sequence([cp0_position])
+
+    cp1 = Dataset()
+    cp1.ControlPointIndex = 1
+    cp1.CumulativeMetersetWeight = 1.0
+
+    beam = Dataset()
+    beam.BeamNumber = 1
+    beam.BeamName = "B1"
+    beam.BeamType = "STATIC"
+    beam.RadiationType = "PHOTON"
+    beam.TreatmentDeliveryType = "TREATMENT"
+    beam.SourceAxisDistance = 1000.0
+    beam.FinalCumulativeMetersetWeight = 1.0
+    beam.NumberOfControlPoints = 2
+    beam.NumberOfWedges = 0
+    beam.NumberOfCompensators = 0
+    beam.NumberOfBoli = 0
+    beam.NumberOfBlocks = 0
+    beam.BeamLimitingDeviceSequence = Sequence([device])
+    beam.ControlPointSequence = Sequence([cp0, cp1])
+    ds.BeamSequence = Sequence([beam])
+
+    referenced_beam = Dataset()
+    referenced_beam.ReferencedBeamNumber = 1
+    referenced_beam.BeamMeterset = 100.0
+
+    fraction = Dataset()
+    fraction.FractionGroupNumber = 1
+    fraction.NumberOfFractionsPlanned = 1
+    fraction.ReferencedBeamSequence = Sequence([referenced_beam])
+    ds.FractionGroupSequence = Sequence([fraction])
+
     ds.save_as(path, enforce_file_format=True)
 
 
@@ -231,3 +287,30 @@ def test_patient_build_refuses_overwrite(tmp_path: Path) -> None:
         pass
     else:
         raise AssertionError("Existing patient artifacts were overwritten silently.")
+
+
+
+def test_build_patient_artifacts_with_explicit_ct_derived_mask(
+    tmp_path: Path,
+) -> None:
+    dicom = tmp_path / "dicom-derived"
+    output = tmp_path / "out-derived"
+    dicom.mkdir()
+    _build_case(dicom)
+
+    result = build_patient_artifacts(
+        dicom,
+        output,
+        derive_external_from_isocenter=True,
+        external_threshold_hu=-500.0,
+        external_closing_iterations=0,
+        mixture_bins=4,
+        out_of_range="raise",
+    )
+
+    summary = json.loads(result.summary_path.read_text(encoding="utf-8"))
+    assert summary["patient_mask"]["source_type"] == "CT_DERIVED_RESEARCH"
+    assert summary["patient_mask"]["rtstruct_roi"] is None
+    derived = summary["patient_mask"]["ct_derived"]
+    assert derived["validation_status"] == "RESEARCH_ONLY"
+    assert derived["seed_patient_mm"] == [1.5, 1.5, 2.5]
