@@ -5,6 +5,28 @@ from dataclasses import dataclass
 import numpy as np
 
 
+def iec61217_negative_bank(device_type: str) -> int:
+    """Return the IEC/DICOM bank corresponding to the negative axis edge.
+
+    DICOM stores beam-limiting positions in IEC element order
+    101..1N, 201..2N. IEC 61217 defines side 1 (X1/Y1) as the lower/negative
+    edge and side 2 (X2/Y2) as the upper/positive edge of the corresponding
+    beam-limiting axis. Therefore DICOM bank 1 is the negative-side bank for
+    conventional X/Y jaws and single-layer MLCX/MLCY devices.
+
+    The helper intentionally rejects unknown device types instead of assuming
+    that every future beam-limiting device follows the same two-bank model.
+    """
+
+    normalized = str(device_type).strip().upper()
+    supported = {"X", "Y", "ASYMX", "ASYMY", "MLCX", "MLCY"}
+    if normalized not in supported:
+        raise ValueError(
+            f"Unsupported IEC beam-limiting device type: {device_type!r}."
+        )
+    return 1
+
+
 @dataclass(frozen=True)
 class DicomBankPositions:
     """Two DICOM leaf/jaw banks in IEC subscript order.
