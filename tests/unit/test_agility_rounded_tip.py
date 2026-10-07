@@ -98,3 +98,44 @@ def test_published_agility_lbrot_shift() -> None:
     # the formula and about 0.42 mm from measurement/MC.
     assert shift_mm == pytest.approx(0.405, abs=2e-5)
     assert shift_mm == pytest.approx(0.41, abs=0.01)
+
+
+
+@pytest.mark.parametrize("side", ["negative", "positive"])
+def test_agility_clinical_edge_range_tangent_stays_within_leaf_slab(
+    side: str,
+) -> None:
+    geometry = agility_literature_tangent_geometry()
+    projected = np.linspace(-20.0, 20.0, 81)
+
+    cylinder = geometry.projected_edge_to_cylinder_origin_cm(
+        projected,
+        opening_side=side,
+    )
+    inside = geometry.tangent_within_leaf_slab(
+        projected,
+        cylinder,
+        zmin_cm=31.18,
+        zmax_cm=40.18,
+    )
+
+    assert np.all(inside)
+
+
+def test_extreme_projected_edge_can_leave_rounded_tip_slab() -> None:
+    geometry = agility_literature_tangent_geometry()
+
+    projected = np.asarray([40.0])
+    cylinder = geometry.projected_edge_to_cylinder_origin_cm(
+        projected,
+        opening_side="negative",
+    )
+
+    inside = geometry.tangent_within_leaf_slab(
+        projected,
+        cylinder,
+        zmin_cm=31.18,
+        zmax_cm=40.18,
+    )
+
+    assert not bool(inside[0])
