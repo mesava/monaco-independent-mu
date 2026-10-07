@@ -17,6 +17,8 @@ class CtExternalMaskDiagnostics:
     final_voxel_count: int
     touches_ct_border: bool
     seed_patient_mm: tuple[float, float, float]
+    seed_was_in_threshold_component: bool
+    seed_to_selected_component_distance_mm: float
 
 
 @dataclass(frozen=True)
@@ -48,8 +50,6 @@ def patient_point_to_ct_index_zyx(
 
     row_spacing, column_spacing = ct.geometry.pixel_spacing_mm
 
-    # Use the closest real CT slice instead of assuming InstanceNumber or a
-    # synthetic z origin.
     slice_distances = (
         np.asarray(ct.image_positions_patient_mm, dtype=np.float64) - point
     ) @ normal
@@ -90,30 +90,34 @@ def derive_external_mask_from_ct(
     threshold_hu: float = -500.0,
     closing_iterations: int = 1,
     fill_holes_per_slice: bool = True,
+    max_seed_snap_distance_mm: float = 50.0,
 ) -> CtDerivedExternalMask:
-    """Derive a research external mask from CT and an in-patient seed.
+    """Derive a research external mask from CT and a plan-space seed.
 
-    Algorithm:
-    1. threshold HU above an explicit air/tissue threshold;
-    2. optional 3-D binary closing;
-    3. connected-component labeling;
-    4. select *only* the component containing the supplied patient-space seed;
-    5. optionally fill enclosed holes independently on each CT slice.
+    The mask is formed from an explicit HU threshold and connected components.
+    The component is selected by the supplied patient-space seed, normally the
+    common treatment isocenter.
 
-    The seed should normally be the treatment isocenter when it is known to lie
-    inside the patient.  This makes detached table/couch components removable
-    without choosing the largest component by a hidden heuristic.
+    If the seed is itself in a low-density cavity, the nearest thresholded
+    tissue voxel may be used, but only within an explicit maximum distance.
+    This permits an isocenter inside lung or another enclosed low-density
+    region without silently choosing the largest CT component.
 
-    This remains research-only.  If the patient is physically connected to the
-    CT couch at the threshold level, connected-component selection cannot
-    separate them and the result requires independent validation against a
-    trusted external contour.
+    The result remains research-only. A patient physically connected to the CT
+    couch at the chosen threshold can still merge with support hardware and
+    therefore requires independent validation against a trusted external
+    contour.
     """
 
     if not np.isfinite(threshold_hu):
         raise ValueError("threshold_hu must be finite.")
     if closing_iterations < 0:
         raise ValueError("closing_iterations must be non-negative.")
+    if (
+        not np.isfinite(max_seed_snap_distance_mm)
+        or max_seed_snap_distance_mm <= 0
+    ):
+        raise ValueError("max_seed_snap_distance_mm must be finite and positive.")
 
     hu = np.asarray(ct.hu, dtype=np.float32)
     candidate = hu > float(threshold_hu)
@@ -133,11 +137,36 @@ def derive_external_mask_from_ct(
 
     seed_index = patient_point_to_ct_index_zyx(ct, seed_patient_mm)
     selected_label = int(labels[seed_index])
+    seed_was_inside = selected_label != 0
+    seed_distance_mm = 0.0
+
     if selected_label == 0:
-        raise ValueError(
-            "Seed point is not inside the thresholded tissue component. "
-            "Review threshold_hu or seed geometry."
+        row_spacing, column_spacing = ct.geometry.pixel_spacing_mm
+        distances, nearest = ndimage.distance_transform_edt(
+            ~candidate,
+            sampling=(
+                ct.geometry.slice_spacing_mm,
+                row_spacing,
+                column_spacing,
+            ),
+            return_indices=True,
         )
+        seed_distance_mm = float(distances[seed_index])
+        if seed_distance_mm > max_seed_snap_distance_mm:
+            raise ValueError(
+                "No thresholded patient component is sufficiently close to "
+                "the seed point."
+            )
+
+        nearest_index = tuple(
+            int(nearest[axis][seed_index])
+            for axis in range(3)
+        )
+        selected_label = int(labels[nearest_index])
+        if selected_label == 0:
+            raise ValueError(
+                "Could not resolve a thresholded tissue component near seed."
+            )
 
     selected = labels == selected_label
     before_fill = int(np.count_nonzero(selected))
@@ -156,6 +185,8 @@ def derive_external_mask_from_ct(
         final_voxel_count=int(np.count_nonzero(selected)),
         touches_ct_border=_touches_border(selected),
         seed_patient_mm=tuple(float(value) for value in seed_patient_mm),
+        seed_was_in_threshold_component=seed_was_inside,
+        seed_to_selected_component_distance_mm=seed_distance_mm,
     )
 
     return CtDerivedExternalMask(
