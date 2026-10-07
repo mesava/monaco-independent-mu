@@ -156,6 +156,17 @@ def load_ct_series(
             f"{series_instance_uid!r} under {root}."
         )
 
+    if series_instance_uid is None:
+        observed_series = {
+            str(getattr(ds, "SeriesInstanceUID", ""))
+            for ds in datasets
+        }
+        if len(observed_series) > 1:
+            raise ValueError(
+                "Multiple CT SeriesInstanceUID values in input; "
+                "select the RTSTRUCT-referenced series explicitly."
+            )
+
     reference = datasets[0]
 
     required = (
