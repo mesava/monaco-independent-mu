@@ -4,6 +4,7 @@ import pytest
 from indep_mu.beam_model.agility_rounded_tip import (
     RoundedLeafTipTangentGeometry,
     agility_literature_tangent_geometry,
+    leaf_bank_rotation_shift_mm,
 )
 
 
@@ -84,3 +85,16 @@ def test_invalid_geometry_is_rejected() -> None:
             radius_cm=17.0,
             cylinder_axis_z_cm=10.0,
         )
+
+
+
+def test_published_agility_lbrot_shift() -> None:
+    shift_mm = leaf_bank_rotation_shift_mm(
+        leaf_thickness_mm=90.0,
+        lbrot_rad=0.009,
+    )
+
+    # Equation gives about 0.405 mm; the publication reports 0.41 mm from
+    # the formula and about 0.42 mm from measurement/MC.
+    assert shift_mm == pytest.approx(0.405, abs=2e-5)
+    assert shift_mm == pytest.approx(0.41, abs=0.01)
