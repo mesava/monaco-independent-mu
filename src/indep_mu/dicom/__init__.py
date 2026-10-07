@@ -1,5 +1,12 @@
 """DICOM readers and geometry helpers."""
 
+from .case import (
+    CaseMessage,
+    CtSeriesRef,
+    DicomCaseManifest,
+    DicomObjectRef,
+    discover_dicom_case,
+)
 from .ct import CtGeometry, CtSeries, load_ct_series
 from .plan_validation import (
     BeamDeliveryFeatures,
@@ -25,8 +32,12 @@ __all__ = [
     "BeamDeliveryFeatures",
     "BeamLimitingDeviceDefinition",
     "BeamLimitingDeviceState",
+    "CaseMessage",
     "ControlPoint",
     "CtGeometry",
+    "CtSeriesRef",
+    "DicomCaseManifest",
+    "DicomObjectRef",
     "CtSeries",
     "DeliverySegment",
     "DoseGeometry",
@@ -37,6 +48,7 @@ __all__ = [
     "RtPlan",
     "analyze_beam_delivery",
     "build_roi_mask",
+    "discover_dicom_case",
     "load_ct_series",
     "load_rtdose",
     "load_rtplan",
