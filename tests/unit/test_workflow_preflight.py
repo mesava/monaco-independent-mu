@@ -3,6 +3,8 @@ import numpy as np
 from indep_mu.dicom.ct import CtGeometry, CtSeries
 from indep_mu.dicom.rtplan import (
     Beam,
+    BeamLimitingDeviceDefinition,
+    BeamLimitingDeviceState,
     ControlPoint,
     RtPlan,
 )
@@ -35,6 +37,7 @@ def _ct(*, patient_position: str | None = "HFS", kvp: float | None = 120.0) -> C
 
 
 def _cp(index: int, gantry: float, couch: float) -> ControlPoint:
+    mlc = tuple([-50.0] * 80 + [50.0] * 80)
     return ControlPoint(
         index=index,
         cumulative_meterset_weight=float(index),
@@ -53,7 +56,10 @@ def _cp(index: int, gantry: float, couch: float) -> ControlPoint:
         dose_rate_set_mu_min=600.0,
         source_to_surface_distance_mm=900.0,
         isocenter_position_mm=(0.0, 0.0, 0.0),
-        device_positions=(),
+        device_positions=(
+            BeamLimitingDeviceState("MLCX", mlc),
+            BeamLimitingDeviceState("ASYMY", (-100.0, 100.0)),
+        ),
     )
 
 
@@ -75,7 +81,22 @@ def _plan(*, gantry: float = 0.0, couch: float = 0.0) -> RtPlan:
         number_of_compensators=0,
         number_of_boli=0,
         number_of_blocks=0,
-        device_definitions=(),
+        device_definitions=(
+            BeamLimitingDeviceDefinition(
+                device_type="MLCX",
+                number_of_leaf_jaw_pairs=80,
+                leaf_position_boundaries_mm=tuple(
+                    np.linspace(-200.0, 200.0, 81)
+                ),
+                source_to_device_distance_mm=349.0,
+            ),
+            BeamLimitingDeviceDefinition(
+                device_type="ASYMY",
+                number_of_leaf_jaw_pairs=1,
+                leaf_position_boundaries_mm=None,
+                source_to_device_distance_mm=470.0,
+            ),
+        ),
         control_points=(
             _cp(0, gantry, couch),
             ControlPoint(
