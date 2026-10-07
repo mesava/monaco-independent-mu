@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import click
@@ -11,6 +12,7 @@ from indep_mu.dicom.rtplan import load_rtplan
 from indep_mu.dicom.rtstruct import list_rtstruct_rois
 from indep_mu.montecarlo.egsnrc_backend import EgsnrcReferenceBackend
 from indep_mu.patient_model.hu_red import DRT120KV
+from indep_mu.workflow.fingerprint import build_technical_case_fingerprint
 from indep_mu.workflow.patient_build import build_patient_artifacts
 from indep_mu.workflow.preflight import run_transport_preflight
 
@@ -97,6 +99,45 @@ def list_rois(dicom_directory: Path) -> None:
         click.echo(f"{roi.roi_number:4d}  {roi.roi_name}")
 
 
+@main.command("fingerprint")
+@click.argument(
+    "dicom_directory",
+    type=click.Path(exists=True, file_okay=False, path_type=Path),
+)
+@click.option(
+    "--output",
+    type=click.Path(dir_okay=False, path_type=Path),
+)
+@click.option(
+    "--include-roi-names",
+    is_flag=True,
+    help="Include RTSTRUCT ROI names in the otherwise de-identified fingerprint.",
+)
+def fingerprint_case(
+    dicom_directory: Path,
+    output: Path | None,
+    include_roi_names: bool,
+) -> None:
+    """Сформировать обезличенный технический fingerprint DICOM case."""
+
+    try:
+        payload = build_technical_case_fingerprint(
+            dicom_directory,
+            include_roi_names=include_roi_names,
+        )
+    except (ValueError, OSError) as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    serialized = json.dumps(payload, indent=2, ensure_ascii=False) + "\n"
+    if output is None:
+        click.echo(serialized, nl=False)
+        return
+
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text(serialized, encoding="utf-8")
+    click.echo(str(output))
+
+
 @main.command("build-patient")
 @click.argument(
     "dicom_directory",
@@ -108,8 +149,25 @@ def list_rois(dicom_directory: Path) -> None:
 )
 @click.option(
     "--patient-roi",
-    required=True,
+    required=False,
     help="Exact RTSTRUCT ROI name used as the external patient contour.",
+)
+@click.option(
+    "--derive-external-from-isocenter",
+    is_flag=True,
+    help="Research-only CT-derived external mask seeded by common plan isocenter.",
+)
+@click.option(
+    "--external-threshold-hu",
+    type=float,
+    default=-500.0,
+    show_default=True,
+)
+@click.option(
+    "--external-closing-iterations",
+    type=click.IntRange(min=0),
+    default=1,
+    show_default=True,
 )
 @click.option(
     "--mixture-bins",
@@ -132,18 +190,28 @@ def list_rois(dicom_directory: Path) -> None:
 def build_patient(
     dicom_directory: Path,
     output_directory: Path,
-    patient_roi: str,
+    patient_roi: str | None,
+    derive_external_from_isocenter: bool,
+    external_threshold_hu: float,
+    external_closing_iterations: int,
     mixture_bins: int,
     out_of_range: str,
     overwrite: bool,
 ) -> None:
-    """Построить .egsphant и PEGSless media из DICOM CT/RTSTRUCT."""
+    """Построить .egsphant и PEGSless media из DICOM case.
+
+    Источник external mask всегда выбирается явно: RTSTRUCT ROI либо
+    research-only CT-derived segmentation.
+    """
 
     try:
         result = build_patient_artifacts(
             dicom_directory,
             output_directory,
             patient_roi_name=patient_roi,
+            derive_external_from_isocenter=derive_external_from_isocenter,
+            external_threshold_hu=external_threshold_hu,
+            external_closing_iterations=external_closing_iterations,
             mixture_bins=mixture_bins,
             out_of_range=out_of_range.lower(),
             overwrite=overwrite,
