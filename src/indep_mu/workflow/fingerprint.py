@@ -67,7 +67,6 @@ def build_technical_case_fingerprint(
         beam_rows.append(
             {
                 "beam_number": beam.number,
-                "beam_name": beam.name,
                 "delivery_class": feature.delivery_class,
                 "beam_meterset_mu": beam.beam_meterset_mu,
                 "control_point_count": feature.control_point_count,
@@ -168,8 +167,6 @@ def build_technical_case_fingerprint(
         },
         "rtstruct": roi_payload,
         "rtplan": {
-            "plan_label": plan.plan_label,
-            "plan_name": plan.plan_name,
             "fraction_group_number": plan.fraction_group_number,
             "number_of_fractions_planned": plan.number_of_fractions_planned,
             "beam_count": len(plan.beams),
