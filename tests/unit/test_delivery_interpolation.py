@@ -46,4 +46,6 @@ def test_sample_segment_interpolates_cmw_mu_and_mlc(tmp_path: Path) -> None:
     assert state.positions("MLCX") == pytest.approx(
         (-9.5, -7.5, 7.5, 9.5)
     )
-    assert state.gantry_angle_deg == pytest.approx(165.0)
+    # CP0 encodes 180 -> 150 with CC. DICOM machine-rotation semantics mean
+    # increasing IEC angle, i.e. a 330-degree CC path; the midpoint is 345 deg.
+    assert state.gantry_angle_deg == pytest.approx(345.0)
