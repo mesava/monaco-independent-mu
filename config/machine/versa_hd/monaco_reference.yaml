@@ -1,0 +1,25 @@
+# Референсные дозы, рассчитанные в Elekta Monaco.
+# Это НЕ независимая абсолютная калибровка и НЕ измеренные данные.
+# Геометрия: 10x10 cm2, SSD 90 cm, depth 10 cm, 100 MU.
+
+machine_model_id: VERSA_HD
+tps_name: Elekta Monaco
+tps_version: "6.1.4"
+
+reference_geometry:
+  field:
+    x_mm: 100
+    y_mm: 100
+  ssd_mm: 900
+  depth_mm: 100
+  delivered_mu: 100
+
+energies:
+  - energy_model_id: 6MV
+    dose_gy: 0.995
+  - energy_model_id: 6FFF
+    dose_gy: 0.994
+  - energy_model_id: 10MV
+    dose_gy: 1.000
+  - energy_model_id: 10FFF
+    dose_gy: 1.001
