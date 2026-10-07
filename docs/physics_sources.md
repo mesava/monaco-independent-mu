@@ -45,3 +45,22 @@ MuscleSkeletalIcrp ↔ BoneCorticalIcrp.
 Даже если Monaco-matched calculation использует endpoint clipping, независимый
 preflight сохраняет out-of-range voxels как отдельный QA-сигнал. Никакое
 clipping не должно происходить молча.
+
+
+## Independent elemental compositions
+
+Для EGSnrc reference backend базовые тканевые composition берутся независимо
+от Monaco из NIST STAR:
+
+- Dry Air:
+  https://physics.nist.gov/PhysRefData/Star/Text/table2.html
+- Adipose Tissue (ICRP):
+  https://physics.nist.gov/cgi-bin/Star/compos.pl?matno=103
+- Muscle, Skeletal (ICRP):
+  https://physics.nist.gov/cgi-bin/Star/compos.pl?matno=201
+- Bone, Cortical (ICRP):
+  https://physics.nist.gov/cgi-bin/Star/compos.pl?matno=120
+
+EGSnrc `material.dat` независимо подтверждает standard dry-air and ICRP
+cortical-bone definitions:
+https://github.com/nrc-cnrc/EGSnrc/blob/master/HEN_HOUSE/pegs4/data/material.dat
