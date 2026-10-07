@@ -15,6 +15,9 @@ from indep_mu.patient_model.hu_red import DRT120KV
 from indep_mu.workflow.baseline import validate_case_against_expected
 from indep_mu.workflow.fingerprint import build_technical_case_fingerprint
 from indep_mu.workflow.patient_build import build_patient_artifacts
+from indep_mu.workflow.patient_diagnostics import (
+    analyze_external_threshold_sensitivity,
+)
 from indep_mu.workflow.preflight import run_transport_preflight
 
 
@@ -182,6 +185,58 @@ def validate_baseline(
     raise click.ClickException(
         f"{len(report.mismatches)} baseline mismatch(es) detected."
     )
+
+
+@main.command("patient-diagnostics")
+@click.argument(
+    "dicom_directory",
+    type=click.Path(exists=True, file_okay=False, path_type=Path),
+)
+@click.option(
+    "--threshold-hu",
+    "thresholds_hu",
+    multiple=True,
+    type=float,
+    default=(-600.0, -500.0, -400.0),
+    show_default=True,
+    help="Repeat to evaluate several CT-derived external thresholds.",
+)
+@click.option(
+    "--closing-iterations",
+    type=click.IntRange(min=0),
+    default=1,
+    show_default=True,
+)
+def patient_diagnostics(
+    dicom_directory: Path,
+    thresholds_hu: tuple[float, ...],
+    closing_iterations: int,
+) -> None:
+    """Проверить CT-derived external mask без создания egsphant."""
+
+    try:
+        rows = analyze_external_threshold_sensitivity(
+            dicom_directory,
+            thresholds_hu=tuple(float(value) for value in thresholds_hu),
+            closing_iterations=closing_iterations,
+        )
+    except (ValueError, OSError) as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    click.echo(
+        "threshold  volume_cm3  seed_snap_mm  HU[min,max]  "
+        "out_low  out_high  border"
+    )
+    for item in rows:
+        click.echo(
+            f"{item.threshold_hu:9.1f}  "
+            f"{item.volume_cm3:10.3f}  "
+            f"{item.seed_to_selected_component_distance_mm:12.3f}  "
+            f"[{item.body_hu_min:.0f},{item.body_hu_max:.0f}]  "
+            f"{item.below_calibration_count:7d}  "
+            f"{item.above_calibration_count:8d}  "
+            f"{item.touches_ct_border}"
+        )
 
 
 @main.command("build-patient")
