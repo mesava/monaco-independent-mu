@@ -10,6 +10,7 @@ from indep_mu.dicom.rtplan import (
     ControlPoint,
 )
 from indep_mu.montecarlo.syncmlce import (
+    ResearchRoundedTipSyncMlceMapper,
     SourceFocusedSyncMlceMapper,
     build_syncmlce_sequence,
     render_syncmlce_sequence,
@@ -212,3 +213,88 @@ def test_syncjaws_projects_front_and_back_surfaces() -> None:
     assert f"{2:10d}" in rendered
     assert "     0.00000000" in rendered
     assert "     1.00000000" in rendered
+
+
+
+def test_research_rounded_tip_mapper_recovers_projected_edges() -> None:
+    beam = _beam(
+        (
+            _cp(
+                0,
+                0.0,
+                mlc=(-50.0, -30.0, 40.0, 60.0),
+                jaw=(-50.0, 50.0),
+            ),
+            _cp(
+                1,
+                1.0,
+                mlc=(-40.0, -20.0, 30.0, 50.0),
+                jaw=(-40.0, 40.0),
+            ),
+        )
+    )
+
+    mapper = ResearchRoundedTipSyncMlceMapper(
+        sad_mm=1000.0,
+        radius_cm=17.0,
+        cylinder_axis_z_cm=34.93,
+        negative_bank=1,
+    )
+    sequence = build_syncmlce_sequence(beam, mapper=mapper)
+
+    from indep_mu.beam_model.agility_rounded_tip import (
+        RoundedLeafTipTangentGeometry,
+    )
+
+    geometry = RoundedLeafTipTangentGeometry(
+        sad_cm=100.0,
+        radius_cm=17.0,
+        cylinder_axis_z_cm=34.93,
+    )
+
+    first = sequence.points[0].opening
+    negative_edge = geometry.cylinder_origin_to_projected_edge_cm(
+        first.negative_cm,
+        opening_side="negative",
+    )
+    positive_edge = geometry.cylinder_origin_to_projected_edge_cm(
+        first.positive_cm,
+        opening_side="positive",
+    )
+
+    np.testing.assert_allclose(negative_edge, [-5.0, -3.0], atol=1e-11)
+    np.testing.assert_allclose(positive_edge, [4.0, 6.0], atol=1e-11)
+
+
+def test_research_rounded_mapper_bank_identity_is_explicit() -> None:
+    from indep_mu.beam_model.iec_coordinates import DicomBankPositions
+
+    banks = DicomBankPositions(
+        bank1_mm=np.asarray([30.0]),
+        bank2_mm=np.asarray([-40.0]),
+    )
+    mapper = ResearchRoundedTipSyncMlceMapper(
+        sad_mm=1000.0,
+        radius_cm=17.0,
+        cylinder_axis_z_cm=34.93,
+        negative_bank=2,
+    )
+
+    opening = mapper.map_banks(banks)
+
+    geometry = RoundedLeafTipTangentGeometry(
+        sad_cm=100.0,
+        radius_cm=17.0,
+        cylinder_axis_z_cm=34.93,
+    )
+    restored_negative = geometry.cylinder_origin_to_projected_edge_cm(
+        opening.negative_cm,
+        opening_side="negative",
+    )
+    restored_positive = geometry.cylinder_origin_to_projected_edge_cm(
+        opening.positive_cm,
+        opening_side="positive",
+    )
+
+    np.testing.assert_allclose(restored_negative, [-4.0], atol=1e-11)
+    np.testing.assert_allclose(restored_positive, [3.0], atol=1e-11)
