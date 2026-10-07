@@ -1,0 +1,32 @@
+# Versa HD / Agility physical head geometry — intentionally incomplete.
+#
+# DO NOT replace null values with Monaco tuning parameters unless their physical
+# semantics have been independently established. This configuration remains
+# non-production until geometry and coordinate transforms are validated.
+
+machine_model_id: VERSA_HD
+
+mlc:
+  end_type: rounded
+
+  # Physical BEAMnrc geometry, cm from source/reference origin.
+  zmin_cm: null
+  zmax_cm: null
+
+  # SYNCMLCE ENDTYPE=0 parameters.
+  leaf_radius_cm: null
+  cylinder_axis_z_cm: null
+  leaf_bank_tilt_rad: null
+
+  # Explicit DICOM bank identity; do not infer from sign.
+  negative_bank: null
+
+jaws:
+  # Add actual physical jaw pair(s) after geometry is established.
+  # Example schema only:
+  - device_type: ASYMY
+    zmin_cm: null
+    zmax_cm: null
+    negative_bank: null
+
+evidence: []
