@@ -94,6 +94,26 @@ multi-ROI        gamma/DVH
 4. **Transport commissioning.** Open fields → MLC stress tests → IMRT → VMAT
    должны пройти сравнение с измерениями до клинического использования.
 
+### Реальный validation case 001
+
+Получен полный Monaco DICOM export и выполнен технический preflight без
+коммита исходных пациентских данных в Git.
+
+Подтверждено:
+
+- 187 CT slices, HFS, 120 kV;
+- 8-field 6-MV dynamic-MLC IMRT;
+- Agility MLCX: 80 pairs × 5 mm, span 400 mm;
+- plan RTDOSE в Gy;
+- RTSTRUCT без external/BODY/patient ROI.
+
+Последний пункт выявил реальный workflow gap. Для него добавлен только
+явно выбираемый research CT-derived external-mask path, seeded by treatment
+isocenter. Он не является клиническим default и должен быть независимо
+проверен до использования.
+
+Подробности: docs/validation_case_001_dicom.md.
+
 ### Принцип независимости
 
 ```text
