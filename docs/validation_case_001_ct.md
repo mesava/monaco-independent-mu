@@ -1,48 +1,111 @@
-# Validation case 001 — CT / RTSTRUCT
+# Validation case 001 — CT / RTSTRUCT patient model
 
-> **Статус: НЕ ВЕРИФИЦИРОВАНО.**
->
-> Этот файл ранее содержал численные характеристики пациентской CT/RTSTRUCT,
-> но в текущей воспроизводимой цепочке нет доступного raw DICOM набора, на
-> котором эти числа можно заново получить и проверить. Поэтому прежние
-> численные значения не считаются результатом проекта и не должны
-> использоваться для физического или клинического вывода.
+> **Статус: REAL DICOM METADATA VERIFIED; EXTERNAL MASK RESEARCH-ONLY.**
 
-## Что уже реализовано в коде
+Полный Monaco DICOM export повторно предоставлен 2026-10-07 и техническая
+интерпретация CT/RTSTRUCT/RTPLAN/RTDOSE зафиксирована в
+`docs/validation_case_001_dicom.md`.
 
-Для реального validation case проект теперь умеет воспроизводимо:
+Этот файл описывает именно patient-model gate M1.
 
-- найти DICOM case и пройти цепочку RTPLAN → RTSTRUCT → referenced CT series;
-- загрузить выбранный CT SeriesInstanceUID, не смешивая соседние CT series;
-- сортировать CT по ImageOrientationPatient / ImagePositionPatient;
-- применять RescaleSlope / RescaleIntercept;
-- проверять FrameOfReferenceUID, геометрию и равномерность slice spacing;
-- перечислять ROI без сохранения PatientName/PatientID;
-- растеризовать CLOSED_PLANAR / CLOSEDPLANAR_XOR RTSTRUCT ROI;
-- применить scanner-specific DRT120kV HU → RED calibration;
-- построить RED → mass density → material model;
-- явно учитывать HU вне measured calibration range;
-- сформировать de-identified .egsphant, PEGSless media и JSON summary.
+## Проверенный CT baseline
 
-## Что требуется для закрытия case 001
+Из raw DICOM подтверждено:
 
-Нужен повторный запуск на исходном пациентском DICOM наборе, доступном
-вычислительной среде. После этого в этот файл можно записывать только
-результаты, автоматически полученные текущей версией кода:
+- 187 CT slices;
+- matrix 512 × 512;
+- PixelSpacing 1.5625 × 1.5625 mm;
+- slice spacing 2.5 mm;
+- axial HFS;
+- KVP 120 kV;
+- RescaleSlope 1;
+- RescaleIntercept -1024 HU;
+- observed whole-CT HU range -3024 ... +3071 HU.
 
-1. CT series UID / FrameOfReference consistency;
-2. shape, spacing, orientation, KVP;
-3. ROI name, contour count, rasterized volume;
-4. HU min/max и out-of-calibration counts внутри Patient ROI;
-5. mass-density range и material statistics;
-6. hashes сгенерированных patient-model artifacts;
-7. git commit, которым выполнен расчёт.
+Scanner-specific calibration, используемая проектом:
 
-До такого повторного запуска **M1 остаётся реализованным на уровне кода и
-synthetic integration tests, но не закрытым как real-patient validation**.
+    DICOM3.DRT120kV
+    measured HU range = -1000 ... +2009 HU
 
-## Политика данных пациента
+## RTSTRUCT
 
-Исходные DICOM и персональные идентификаторы не коммитятся в репозиторий.
-В Git допускаются только обезличенные конфигурации и агрегированные результаты,
-которые можно воспроизвести из локального validation dataset.
+В RTSTRUCT 14 клинических ROI, но нет отдельного:
+
+- External;
+- BODY;
+- patient.
+
+Поэтому production-oriented path с trusted external contour для этого case
+недоступен.
+
+Нельзя использовать PTV/грудь как внешнюю маску и нельзя молча считать весь
+CT FOV пациентом.
+
+## CT-derived research external mask
+
+Для исследовательского продолжения M1 реализован отдельный явный path:
+
+1. threshold CT;
+2. 3-D binary closing;
+3. connected-component selection;
+4. общий treatment isocenter как seed;
+5. если seed находится в low-density cavity — nearest tissue snap с maximum
+   distance;
+6. per-slice enclosed-hole filling.
+
+Для первого реального прогона:
+
+    threshold = -500 HU
+    closing iterations = 1
+    isocenter = (-71.3, -84.5, +100.0) mm
+
+Получено:
+
+- HU в seed voxel: -821 HU;
+- seed находится внутри low-density lung region;
+- nearest-tissue snap distance: 2.210 mm;
+- selected component before fill: 5,898,483 voxels;
+- final mask: 6,435,424 voxels;
+- volume: 39,278.71 cm3;
+- z extent: -210 ... +250 mm;
+- mask не касается CT volume border;
+- HU inside filled mask: -1024 ... +3071 HU.
+
+Статус этой маски:
+
+    RESEARCH_MASK_DERIVED_NOT_VALIDATED
+
+## Почему M1 ещё не закрыт полностью
+
+Результат геометрически правдоподобен, но необходимо отдельно исключить
+contamination CT couch/support.
+
+Также mask содержит HU вне измеренной DRT120kV calibration table с обеих
+сторон. Проект поэтому требует:
+
+- явный подсчёт HU < -1000;
+- явный подсчёт HU > +2009;
+- явную out-of-range policy;
+- никакого скрытого clipping.
+
+Для этого добавлена команда:
+
+    indep-mu patient-diagnostics <DICOM_DIR>
+
+По умолчанию она сравнивает -600/-500/-400 HU и показывает volume,
+seed-snap distance, out-of-calibration counts и border contact.
+
+## Gate перед первым patient .egsphant
+
+Перед тем как считать .egsphant Case 001 validation artifact, требуется:
+
+1. threshold sensitivity;
+2. posterior support/couch contamination check;
+3. out-of-calibration counts;
+4. решение по endpoint clipping;
+5. sensitivity выбора mixture_bins;
+6. только после этого generate/hash .egsphant + PEGSless media.
+
+Таким образом CT parsing / HU calibration / patient-model код реализован,
+но реальный M1 считается закрытым только после валидации external-mask и
+material discretisation.
