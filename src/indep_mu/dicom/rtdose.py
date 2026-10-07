@@ -6,6 +6,8 @@ from pathlib import Path
 import numpy as np
 import pydicom
 
+from indep_mu.mu_check.dosegrid import RectilinearDoseGrid, trilinear_sample
+
 
 @dataclass(frozen=True)
 class DoseGeometry:
@@ -31,6 +33,36 @@ class DoseGeometry:
     def normal_direction(self) -> np.ndarray:
         normal = np.cross(self.column_direction, self.row_direction)
         return normal / np.linalg.norm(normal)
+
+    @property
+    def local_frame_offsets_mm(self) -> np.ndarray:
+        """Frame-centre coordinates along the native dose-grid normal."""
+
+        origin = np.asarray(self.image_position_patient_mm, dtype=np.float64)
+        relative = self.frame_positions_patient_mm - origin[None, :]
+        return relative @ self.normal_direction
+
+    def patient_to_local_mm(self, points_patient_mm: np.ndarray) -> np.ndarray:
+        """Transform patient coordinates to native dose-grid x/y/z coordinates."""
+
+        points = np.asarray(points_patient_mm, dtype=np.float64)
+        if points.ndim == 1:
+            points = points.reshape(1, -1)
+        if points.ndim != 2 or points.shape[1] != 3:
+            raise ValueError("Patient points must have shape (N, 3).")
+        if not np.all(np.isfinite(points)):
+            raise ValueError("Patient points must be finite.")
+
+        origin = np.asarray(self.image_position_patient_mm, dtype=np.float64)
+        relative = points - origin[None, :]
+        axes = np.vstack(
+            [
+                self.column_direction,
+                self.row_direction,
+                self.normal_direction,
+            ]
+        )
+        return relative @ axes.T
 
     def voxel_center_patient_mm(
         self,
@@ -68,6 +100,44 @@ class RtDose:
     @property
     def shape(self) -> tuple[int, int, int]:
         return tuple(int(value) for value in self.dose.shape)
+
+    @property
+    def dose_gy(self) -> np.ndarray:
+        if self.dose_units.upper() != "GY":
+            raise ValueError(
+                f"RTDOSE DoseUnits={self.dose_units!r}; absolute Gy was requested."
+            )
+        return np.asarray(self.dose, dtype=np.float64)
+
+    def local_rectilinear_grid_cm(self) -> RectilinearDoseGrid:
+        """Represent native RTDOSE centres in its own orthonormal image basis."""
+
+        frames, rows, columns = self.shape
+        row_spacing, column_spacing = self.geometry.pixel_spacing_mm
+
+        x_cm = np.arange(columns, dtype=np.float64) * column_spacing / 10.0
+        y_cm = np.arange(rows, dtype=np.float64) * row_spacing / 10.0
+        z_mm = np.asarray(self.geometry.local_frame_offsets_mm, dtype=np.float64)
+
+        order = np.argsort(z_mm)
+        z_cm = z_mm[order] / 10.0
+        dose = self.dose_gy[order, :, :]
+
+        if z_cm.size > 1 and np.any(np.diff(z_cm) <= 0):
+            raise ValueError("RTDOSE frame positions are not strictly monotonic.")
+
+        return RectilinearDoseGrid(
+            x_cm=x_cm,
+            y_cm=y_cm,
+            z_cm=z_cm,
+            dose=dose,
+        )
+
+    def sample_patient_points_gy(self, points_patient_mm: np.ndarray) -> np.ndarray:
+        """Sample physical RTDOSE at arbitrary patient-coordinate points."""
+
+        local_cm = self.geometry.patient_to_local_mm(points_patient_mm) / 10.0
+        return trilinear_sample(self.local_rectilinear_grid_cm(), local_cm)
 
 
 def _float_tuple(value, length: int, name: str) -> tuple[float, ...]:
@@ -231,6 +301,28 @@ def load_rtdose(
         tolerance_mm=geometry_tolerance_mm,
     )
 
+    scaling = float(dataset.DoseGridScaling)
+    if not np.isfinite(scaling) or scaling <= 0:
+        raise ValueError("DoseGridScaling must be finite and positive.")
+
+    column_direction = np.asarray(orientation[:3], dtype=np.float64)
+    row_direction = np.asarray(orientation[3:], dtype=np.float64)
+    for name, direction in (
+        ("column", column_direction),
+        ("row", row_direction),
+    ):
+        if not np.isclose(np.linalg.norm(direction), 1.0, rtol=0.0, atol=1e-5):
+            raise ValueError(
+                f"ImageOrientationPatient {name} direction is not unit length."
+            )
+    if not np.isclose(
+        np.dot(column_direction, row_direction),
+        0.0,
+        rtol=0.0,
+        atol=1e-5,
+    ):
+        raise ValueError("ImageOrientationPatient directions are not orthogonal.")
+
     pixels = np.asarray(dataset.pixel_array)
     if frames == 1:
         if pixels.shape != (rows, columns):
@@ -246,7 +338,7 @@ def load_rtdose(
 
     dose = (
         pixels.astype(np.float64)
-        * float(dataset.DoseGridScaling)
+        * scaling
     ).astype(np.float32)
 
     plan_uids, beam_numbers = _referenced_plan_and_beams(dataset)
