@@ -115,3 +115,24 @@ Diagnostic PTV-core:
 
 Порог pass-rate и перевод результата в GREEN/YELLOW/RED будут утверждены
 после validation series, а не зашиты в код заранее.
+
+
+## Dose quantity: mandatory safety gate
+
+Standard RTDOSE metadata tells us that the reference distribution is physical
+dose in Gy, but it does **not** by itself prove whether the Monaco Monte Carlo
+plan was reported as dose-to-medium or converted to dose-to-water.
+
+The 3D comparison API therefore requires an explicit declaration:
+
+- `DOSE_TO_MEDIUM`; or
+- `DOSE_TO_WATER`.
+
+The independent MC grid must declare its scored/converted quantity as well.
+Comparison stops if the TPS quantity is unknown or if the two quantities do
+not match.
+
+For validation case 001 the RTDOSE quantity is currently **UNKNOWN** until it
+is verified from Monaco calculation properties/API/export metadata. It must
+not be inferred solely from `DoseUnits=GY` or from Monaco's general Monte
+Carlo capabilities.
