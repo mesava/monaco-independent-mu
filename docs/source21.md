@@ -34,26 +34,25 @@ head configuration.
 
 ## theta / phi / phicol
 
-Автоматическое преобразование IEC/DICOM angles пока намеренно не включено.
+Добавлен `ZhanHfsSource21OrientationMapper`, реализующий опубликованное
+преобразование Zhan/Jiang/Osei для HFS.
 
-Причина: DICOM gantry/couch/collimator angles и DOSXYZnrc
-`theta/phi/phicol` имеют разные coordinate conventions; опубликованные
-работы специально посвящены этому преобразованию.
+Проверки включают:
 
-Код требует объект `Source21OrientationMapper`. Пока не выбран и не
-верифицирован конкретный mapper, production source-21 input создать нельзя.
+- gantry 0/90/180/270;
+- collimator rotations;
+- согласие с coplanar reference equations;
+- несколько non-coplanar regression vectors.
 
-Это сделано специально, чтобы формула для couch/gantry не оказалась скрытым
-непроверенным предположением.
+Точные сочетания gantry=90/270 и couch=90/270 считаются singular и
+останавливают расчёт вместо скрытого perturbation angles.
+
+Patient positions кроме HFS пока запрещрещены до отдельной валидации.
+
+Подробности: `docs/source21_orientation.md`.
 
 ## Следующий шаг
 
-Orientation mapper будет валидироваться минимум на cardinal geometries:
-
-- gantry 0/90/180/270;
-- collimator 0/90/270;
-- затем non-zero couch;
-- визуальная/геометрическая проверка field direction в DOSXYZnrc;
-- round-trip against known test plans.
-
-После этого можно собирать полный per-beam DOSXYZnrc input.
+Остаётся геометрическая end-to-end validation source orientation уже в самом
+DOSXYZnrc/BEAMnrc на контрольных планах. После этого mapper можно перевести из
+research-validated в commissioned transport configuration.
