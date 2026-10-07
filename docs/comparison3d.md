@@ -69,3 +69,49 @@ Gamma намеренно пока не смешан с dose-difference implement
 
 Рабочая цель проекта остаётся primary 3%/3 mm и diagnostic PTV-core 2%/2 mm.
 2%/2 mm на старте не является автоматическим clinical failure criterion.
+
+
+## Gamma implementation
+
+Добавлен отдельный wrapper над PyMedPhys gamma. Зависимость опциональна и
+устанавливается через extra:
+
+    pip install -e ".[gamma]"
+
+Проект не использует скрытые defaults для клинически значимых параметров.
+
+Для **global gamma** обязательно явно передать normalization dose в Gy.
+Это исключает случайную подмену выбранной prescription/high-dose
+normalization максимумом конкретного dose grid.
+
+Gamma выполняется после того, как независимый MC один раз семплирован на
+центры reference RTDOSE grid. Затем reference и evaluation имеют одну
+ортонормированную spatial basis; TPS остаётся reference distribution.
+
+Конфигурация хранит явно:
+
+- dose_percent_threshold;
+- distance_mm_threshold;
+- lower_percent_dose_cutoff;
+- global/local;
+- global_normalisation_gy;
+- interpolation fraction;
+- max_gamma.
+
+Pass rate считается только по finite gamma values и может дополнительно
+ограничиваться mask, например PTV-core.
+
+### Рабочие конфигурации, но не утверждённые action levels
+
+Primary:
+
+    3% / 3 mm
+    lower dose cutoff = 10%
+    global normalization = explicit high-dose/prescription value
+
+Diagnostic PTV-core:
+
+    2% / 2 mm
+
+Порог pass-rate и перевод результата в GREEN/YELLOW/RED будут утверждены
+после validation series, а не зашиты в код заранее.
