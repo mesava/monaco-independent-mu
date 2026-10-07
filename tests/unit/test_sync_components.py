@@ -339,3 +339,32 @@ def test_research_rounded_mapper_applies_explicit_projected_shift() -> None:
         [(50.0 + 0.405) / 10.0],
         atol=1e-11,
     )
+
+
+
+def test_research_rounded_mapper_checks_physical_leaf_slab() -> None:
+    from indep_mu.beam_model.iec_coordinates import DicomBankPositions
+
+    mapper = ResearchRoundedTipSyncMlceMapper(
+        sad_mm=1000.0,
+        radius_cm=17.0,
+        cylinder_axis_z_cm=34.93,
+        negative_bank=1,
+        zmin_cm=31.18,
+        zmax_cm=40.18,
+    )
+
+    normal = DicomBankPositions(
+        bank1_mm=np.asarray([-200.0]),
+        bank2_mm=np.asarray([200.0]),
+    )
+    opening = mapper.map_banks(normal)
+    assert opening.negative_cm.shape == (1,)
+    assert opening.positive_cm.shape == (1,)
+
+    extreme = DicomBankPositions(
+        bank1_mm=np.asarray([400.0]),
+        bank2_mm=np.asarray([200.0]),
+    )
+    with pytest.raises(ValueError, match="tangent outside"):
+        mapper.map_banks(extreme)
