@@ -8,6 +8,8 @@ from indep_mu.montecarlo.threedose import ThreeDDose
 from indep_mu.mu_check.dosegrid import RectilinearDoseGrid, trilinear_sample
 from indep_mu.patient_model.egsphant import EgsphantGeometry
 
+from .dose_quantity import DoseQuantity
+
 
 @dataclass(frozen=True)
 class PatientMcDoseGridGy:
@@ -19,6 +21,7 @@ class PatientMcDoseGridGy:
     dose: ThreeDDose
     phantom_geometry: EgsphantGeometry
     frame_of_reference_uid: str
+    dose_quantity: DoseQuantity
 
     def __post_init__(self) -> None:
         if not self.frame_of_reference_uid:
