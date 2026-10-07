@@ -3,6 +3,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
+from indep_mu.beam_model.agility_rounded_tip import RoundedLeafTipTangentGeometry
 from indep_mu.dicom.rtplan import (
     Beam,
     BeamLimitingDeviceDefinition,
@@ -241,10 +242,6 @@ def test_research_rounded_tip_mapper_recovers_projected_edges() -> None:
         negative_bank=1,
     )
     sequence = build_syncmlce_sequence(beam, mapper=mapper)
-
-    from indep_mu.beam_model.agility_rounded_tip import (
-        RoundedLeafTipTangentGeometry,
-    )
 
     geometry = RoundedLeafTipTangentGeometry(
         sad_cm=100.0,
