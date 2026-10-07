@@ -1,7 +1,11 @@
 import numpy as np
 import pytest
 
-from indep_mu.beam_model.iec_coordinates import IsocenterProjection, split_dicom_banks
+from indep_mu.beam_model.iec_coordinates import (
+    IsocenterProjection,
+    iec61217_negative_bank,
+    split_dicom_banks,
+)
 
 
 def test_split_dicom_bank_order_is_preserved() -> None:
@@ -33,3 +37,17 @@ def test_isocenter_projection_round_trip() -> None:
 def test_projection_rejects_invalid_geometry() -> None:
     with pytest.raises(ValueError):
         IsocenterProjection(0.0)
+
+
+
+@pytest.mark.parametrize(
+    "device_type",
+    ["X", "Y", "ASYMX", "ASYMY", "MLCX", "MLCY"],
+)
+def test_iec_side1_is_negative_axis_bank(device_type: str) -> None:
+    assert iec61217_negative_bank(device_type) == 1
+
+
+def test_unknown_iec_device_type_is_not_guessed() -> None:
+    with pytest.raises(ValueError, match="Unsupported IEC"):
+        iec61217_negative_bank("MLCX1")
