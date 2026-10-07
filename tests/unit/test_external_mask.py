@@ -15,16 +15,13 @@ def _ct() -> CtSeries:
     zz, yy, xx = np.indices(shape)
     body = (
         ((zz - 3.0) / 2.5) ** 2
-        + ((yy - 5.0) / 4.0) ** 2
+        + ((yy - 5.0) / 3.0) ** 2
         + ((xx - 5.0) / 4.0) ** 2
         <= 1.0
     )
     hu[body] = 0
 
-    # Enclosed low-density cavity: should still be inside the external mask.
     hu[3, 4:7, 4:7] = -1000
-
-    # Detached synthetic couch/table object.
     hu[1:6, 10, 1:10] = 0
 
     geometry = CtGeometry(
@@ -58,7 +55,7 @@ def test_patient_point_maps_to_ct_voxel() -> None:
     assert patient_point_to_ct_index_zyx(ct, (5.0, 5.0, 3.0)) == (3, 5, 5)
 
 
-def test_seeded_external_mask_excludes_detached_couch_and_fills_hole() -> None:
+def test_seeded_external_mask_excludes_detached_support_and_fills_hole() -> None:
     ct = _ct()
 
     result = derive_external_mask_from_ct(
@@ -69,10 +66,7 @@ def test_seeded_external_mask_excludes_detached_couch_and_fills_hole() -> None:
         fill_holes_per_slice=True,
     )
 
-    # Central cavity becomes part of the external patient envelope.
     assert result.mask[3, 5, 5]
-
-    # Detached couch remains excluded.
     assert not np.any(result.mask[:, 10, :])
 
     assert result.diagnostics.connected_component_count >= 2
@@ -81,7 +75,7 @@ def test_seeded_external_mask_excludes_detached_couch_and_fills_hole() -> None:
     assert result.diagnostics.seed_to_selected_component_distance_mm > 0
 
 
-def test_seed_in_air_is_rejected() -> None:
+def test_seed_too_far_from_tissue_is_rejected() -> None:
     ct = _ct()
 
     with pytest.raises(ValueError, match="sufficiently close"):
