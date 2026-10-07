@@ -96,6 +96,8 @@ class ResearchRoundedTipSyncMlceMapper:
     cylinder_axis_z_cm: float
     negative_bank: int
     projected_edge_shift_mm: float = 0.0
+    zmin_cm: float | None = None
+    zmax_cm: float | None = None
 
     def __post_init__(self) -> None:
         if not np.isfinite(self.sad_mm) or self.sad_mm <= 0:
@@ -104,6 +106,11 @@ class ResearchRoundedTipSyncMlceMapper:
             raise ValueError("negative_bank must be 1 or 2.")
         if not np.isfinite(self.projected_edge_shift_mm):
             raise ValueError("projected_edge_shift_mm must be finite.")
+        if (self.zmin_cm is None) != (self.zmax_cm is None):
+            raise ValueError("zmin_cm and zmax_cm must be supplied together.")
+        if self.zmin_cm is not None and self.zmax_cm is not None:
+            if not (0.0 < self.zmin_cm < self.zmax_cm):
+                raise ValueError("Leaf slab requires 0 < zmin_cm < zmax_cm.")
 
         # Validate physical radius/CIL constraints immediately.
         RoundedLeafTipTangentGeometry(
@@ -144,6 +151,26 @@ class ResearchRoundedTipSyncMlceMapper:
             positive_edge,
             opening_side="positive",
         )
+
+        if self.zmin_cm is not None and self.zmax_cm is not None:
+            negative_inside = geometry.tangent_within_leaf_slab(
+                negative_edge,
+                negative_origin,
+                zmin_cm=self.zmin_cm,
+                zmax_cm=self.zmax_cm,
+            )
+            positive_inside = geometry.tangent_within_leaf_slab(
+                positive_edge,
+                positive_origin,
+                zmin_cm=self.zmin_cm,
+                zmax_cm=self.zmax_cm,
+            )
+            if not np.all(negative_inside) or not np.all(positive_inside):
+                raise ValueError(
+                    "At least one projected leaf edge is tangent outside the "
+                    "configured rounded-tip z slab; ENDTYPE=0 cylinder mapping "
+                    "is not valid for that state."
+                )
 
         return SyncMlceOpening(
             negative_cm=np.asarray(negative_origin, dtype=np.float64),
