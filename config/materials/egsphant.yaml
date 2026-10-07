@@ -1,0 +1,18 @@
+# Legacy DOSXYZnrc/.egsphant material-mixture discretization.
+#
+# No clinical bin count is selected yet. Candidates must be compared in a
+# sensitivity study before commissioning is frozen.
+
+format: egsphant
+max_media: 61
+selected_mixture_bins: null
+validation_candidates:
+  - 5
+  - 9
+  - 19
+
+notes:
+  - "19 bins = 18 interior mixture compositions per unique pair."
+  - "For the complete supplied Patient LUT: 7 pure materials + 3 unique mixture pairs."
+  - "19 bins therefore has a theoretical maximum of 61 media."
+  - "DOSXYZnrc default $MXMED is 5 and must be increased/recompiled."
