@@ -7,6 +7,7 @@ from .delivery import (
     directed_rotation_delta_deg,
     sample_beam_segment,
 )
+from .egsnrc_backend import EgsnrcReferenceBackend
 from .interface import (
     MonteCarloBackend,
     MonteCarloCapabilities,
@@ -52,6 +53,7 @@ __all__ = [
     "AbsoluteMcCalibration",
     "CoplanarHfsReferenceAngles",
     "DeliveryInterpolationPolicy",
+    "EgsnrcReferenceBackend",
     "FocusedJawPairGeometry",
     "MonteCarloBackend",
     "MonteCarloCapabilities",
