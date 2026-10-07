@@ -21,6 +21,7 @@ class AgilityDicomGeometryReport:
     leaf_pairs: int | None
     field_span_mm: float | None
     nominal_leaf_width_mm: float | None
+    source_to_mlc_distance_mm: float | None
 
     @property
     def errors(self) -> tuple[GeometryMessage, ...]:
@@ -37,6 +38,8 @@ def validate_agility_dicom_geometry(
     expected_leaf_pairs: int = 80,
     expected_leaf_width_mm: float = 5.0,
     expected_field_span_mm: float = 400.0,
+    expected_source_to_mlc_distance_mm: float = 349.3,
+    source_distance_tolerance_mm: float = 1.0,
     tolerance_mm: float = 1e-3,
 ) -> AgilityDicomGeometryReport:
     """Validate delivery-coordinate geometry exported for an Agility MLC.
@@ -66,6 +69,7 @@ def validate_agility_dicom_geometry(
             leaf_pairs=None,
             field_span_mm=None,
             nominal_leaf_width_mm=None,
+            source_to_mlc_distance_mm=None,
         )
 
     mlc = mlcs[0]
@@ -94,6 +98,7 @@ def validate_agility_dicom_geometry(
             leaf_pairs=mlc.number_of_leaf_jaw_pairs,
             field_span_mm=None,
             nominal_leaf_width_mm=None,
+            source_to_mlc_distance_mm=mlc.source_to_device_distance_mm,
         )
 
     boundary_values = np.asarray(boundaries, dtype=np.float64)
@@ -133,6 +138,26 @@ def validate_agility_dicom_geometry(
             )
         )
 
+    mlc_distance = mlc.source_to_device_distance_mm
+    if mlc_distance is None:
+        messages.append(
+            GeometryMessage(
+                "ERROR",
+                "MLC_SOURCE_DISTANCE_MISSING",
+                "MLC SourceToBeamLimitingDeviceDistance is missing.",
+            )
+        )
+    elif abs(mlc_distance - expected_source_to_mlc_distance_mm) > source_distance_tolerance_mm:
+        messages.append(
+            GeometryMessage(
+                "ERROR",
+                "MLC_SOURCE_DISTANCE",
+                f"Expected Agility reference plane near "
+                f"{expected_source_to_mlc_distance_mm:g} mm; DICOM contains "
+                f"{mlc_distance:g} mm.",
+            )
+        )
+
     if beam.source_axis_distance_mm is not None and abs(
         beam.source_axis_distance_mm - 1000.0
     ) > tolerance_mm:
@@ -163,4 +188,5 @@ def validate_agility_dicom_geometry(
         leaf_pairs=mlc.number_of_leaf_jaw_pairs,
         field_span_mm=span,
         nominal_leaf_width_mm=nominal_width,
+        source_to_mlc_distance_mm=mlc_distance,
     )
