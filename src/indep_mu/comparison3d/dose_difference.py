@@ -33,13 +33,13 @@ class DoseDifferenceSummary:
 
 @dataclass(frozen=True)
 class DoseDifferenceResult:
-    dose_quantity: DoseQuantity
     reference_dose_gy: np.ndarray
     evaluated_dose_gy: np.ndarray
     difference_gy: np.ndarray
     relative_difference_percent: np.ndarray
     evaluation_mask: np.ndarray
     summary: DoseDifferenceSummary
+    dose_quantity: DoseQuantity = DoseQuantity.DOSE_TO_MEDIUM
 
 
 def _dose_plane_patient_points(reference: RtDose, frame_index: int) -> np.ndarray:
