@@ -77,15 +77,18 @@ def test_seeded_external_mask_excludes_detached_couch_and_fills_hole() -> None:
 
     assert result.diagnostics.connected_component_count >= 2
     assert not result.diagnostics.touches_ct_border
+    assert not result.diagnostics.seed_was_in_threshold_component
+    assert result.diagnostics.seed_to_selected_component_distance_mm > 0
 
 
 def test_seed_in_air_is_rejected() -> None:
     ct = _ct()
 
-    with pytest.raises(ValueError, match="not inside"):
+    with pytest.raises(ValueError, match="sufficiently close"):
         derive_external_mask_from_ct(
             ct,
             seed_patient_mm=(0.0, 0.0, 0.0),
             threshold_hu=-500.0,
             closing_iterations=0,
+            max_seed_snap_distance_mm=1.0,
         )
