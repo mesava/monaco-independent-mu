@@ -10,16 +10,16 @@ from indep_mu.dicom.rtplan import load_rtplan
 from test_rtplan import _write_plan
 
 
-def test_delivery_is_detected_as_dynamic_mlc(tmp_path: Path) -> None:
+def test_delivery_is_detected_as_vmat(tmp_path: Path) -> None:
     path = tmp_path / "plan.dcm"
     _write_plan(path)
 
     plan = load_rtplan(path)
     features = analyze_beam_delivery(plan.beam(1))
 
-    assert features.delivery_class == "DYNAMIC_MLC"
+    assert features.delivery_class == "VMAT"
     assert features.mlc_dynamic
-    assert not features.gantry_dynamic
+    assert features.gantry_dynamic
     assert features.control_point_count == 3
     assert features.segment_count == 2
     assert features.energies_mv == (6.0,)
