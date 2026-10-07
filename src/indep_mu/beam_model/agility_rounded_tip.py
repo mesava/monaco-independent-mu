@@ -146,3 +146,30 @@ def agility_literature_tangent_geometry(
         radius_cm=17.0,
         cylinder_axis_z_cm=34.93,
     )
+
+
+
+def leaf_bank_rotation_shift_mm(
+    *,
+    leaf_thickness_mm: float,
+    lbrot_rad: float,
+) -> float:
+    """Return the magnitude of the field-centre shift caused by LBROT.
+
+    Gholampourkashi et al. used
+
+        shift = leaf_thickness * sin(LBROT) / 2
+
+    to compensate the translation introduced by the Agility leaf-bank
+    rotation in the SYNCMLCE model.
+
+    This helper returns only the magnitude.  The sign depends on the chosen
+    bank/axis convention and must not be inferred here.
+    """
+
+    if not np.isfinite(leaf_thickness_mm) or leaf_thickness_mm <= 0:
+        raise ValueError("leaf_thickness_mm must be finite and positive.")
+    if not np.isfinite(lbrot_rad):
+        raise ValueError("lbrot_rad must be finite.")
+
+    return float(abs(leaf_thickness_mm * np.sin(lbrot_rad) / 2.0))
