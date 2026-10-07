@@ -13,7 +13,7 @@
 - учитывает динамику MLC Agility и VMAT;
 - строит пациентскую модель по CT с учётом гетерогенностей;
 - выполняет независимый Monte Carlo расчёт абсолютной дозы;
-- рассчитывает **MU_indep по каждому beam**;
+- выполняет **per-beam equivalent-MU consistency check** по независимой dose-per-MU;
 - использует несколько малых ROI для устойчивого per-beam MU-check;
 - выполняет независимое 3D сравнение MC vs Monaco;
 - формирует автоматические QA-флаги и отчёт.
@@ -65,31 +65,52 @@ multi-ROI        gamma/DVH
       QA / отчёт
 ```
 
-## Текущий рабочий этап
+## Текущее состояние
 
-### M1 — Patient model reconstruction
+Проект уже вышел за рамки первоначального patient-model prototype.
 
-Строится цепочка:
+| Milestone | Состояние |
+|---|---|
+| **M1 — Patient model** | HU→RED→ρ→MaterialMix, PEGSless, egsphant, sensitivity framework реализованы |
+| **M2 — RTPLAN/VMAT** | BeamMeterset, CP inheritance, jaws/MLC, CMW и delivery segments реализованы |
+| **M3 — Versa HD/Agility** | commissioning data model, TPS reference, machine/energy resolution и geometry readiness реализованы; physical head model ещё валидируется |
+| **M4 — Monte Carlo** | transport abstraction, SYNCMLCE/SYNCJAWS/source21 layers, 3ddose и absolute-normalization infrastructure реализованы; полноценный commissioned transport model ещё не закрыт |
+| **M5 — Equivalent MU** | multi-ROI equivalent-MU check, patient-coordinate spherical ROI и ±3%/±5% infrastructure реализованы |
+| **M6 — 3D comparison** | RTDOSE/MC alignment, ΔD, DVH и explicit gamma wrapper реализованы |
+
+### Основные открытые физические задачи
+
+До первого полноценного независимого расчёта клинического плана должны быть
+закрыты четыре принципиальных узла:
+
+1. **Agility rounded-tip geometry.** Нужен валидированный transform между
+   DICOM leaf position и физической геометрией rounded leaf end в MC.
+2. **Source 21 orientation.** Coplanar HFS reference проверяется, но общий
+   non-coplanar IEC/DICOM → DOSXYZnrc transform ещё не объявлен production-ready.
+3. **Независимая absolute calibration.** Monaco reference doses за 100 MU
+   хранятся только как TPS benchmark; MC нормируется по измеренной dose/MU.
+4. **Transport commissioning.** Open fields → MLC stress tests → IMRT → VMAT
+   должны пройти сравнение с измерениями до клинического использования.
+
+### Принцип независимости
 
 ```text
-CT pixel
-  ↓ RescaleSlope / RescaleIntercept
-HU
-  ↓ scanner-specific CT calibration
-RED
-  ↓ RED → mass density
-ρ [g/cm³]
-  ↓ patient material LUT
-Material / MaterialMix
-  ↓
-MC voxel model
+Измеренная commissioning dose/MU
+             │
+             ▼
+Independent MC ───────────────► Gy/MU
+             │
+             ├──► equivalent MU per beam
+             │
+             └──► 3D dose / gamma / DVH
+                         ▲
+                         │
+                  Monaco RTDOSE
+                  только reference
 ```
 
-Используются предоставленные commissioning/configuration данные Monaco:
-
-- CT calibration 120 kV: 18 точек HU → RED;
-- `materials_LUT_Patient.json`;
-- отдельно сохранены LUT для Phantom и PPS для будущих задач валидации и моделирования стола.
+Monaco dose **никогда не используется для подгонки или абсолютной нормировки
+independent MC**.
 
 ## План разработки
 
