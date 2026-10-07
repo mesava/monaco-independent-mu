@@ -14,7 +14,9 @@
 # zmin = 34.93 - 3.75 = 31.18 cm
 # zmax = 34.93 + 5.25 = 40.18 cm
 #
-# Bank identity and full Y-jaw thickness remain deliberately unset.
+# DICOM/IEC side identity is standardized: bank 1 = X1/Y1 = negative-axis
+# side, bank 2 = X2/Y2 = positive-axis side. Full Y-jaw thickness remains
+# deliberately unset.
 
 machine_model_id: VERSA_HD
 
@@ -25,7 +27,7 @@ mlc:
   leaf_radius_cm: 17.0
   cylinder_axis_z_cm: 34.93
   leaf_bank_tilt_rad: 0.009
-  negative_bank: null
+  negative_bank: 1
 
 jaws:
   - device_type: ASYMY
@@ -34,10 +36,11 @@ jaws:
     # established here, so zmax remains null.
     zmin_cm: 43.2
     zmax_cm: null
-    negative_bank: null
+    negative_bank: 1
 
 evidence:
   - "Hernandez et al., Medical Physics 2022, DOI 10.1002/mp.16016"
   - "Gholampourkashi et al., JACMP 2019, DOI 10.1002/acm2.12485"
   - "Ohira et al., In Vivo 2020, DOI 10.21873/invivo.12050"
+  - "DICOM PS3.3 RT Beams Module + IEC 61217 element order: 1-side is negative-axis bank"
   - "Monaco Dose Calculation Technical Reference: Agility Y-jaw top ~43.2 cm"
