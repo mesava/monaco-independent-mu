@@ -6,6 +6,7 @@ from typing import Protocol, runtime_checkable
 
 import numpy as np
 
+from indep_mu.beam_model.agility_rounded_tip import RoundedLeafTipTangentGeometry
 from indep_mu.beam_model.iec_coordinates import (
     DicomBankPositions,
     IsocenterProjection,
@@ -75,6 +76,68 @@ class SourceFocusedSyncMlceMapper:
         return SyncMlceOpening(
             negative_cm=np.asarray(negative, dtype=np.float64),
             positive_cm=np.asarray(positive, dtype=np.float64),
+        )
+
+
+
+@dataclass(frozen=True)
+class ResearchRoundedTipSyncMlceMapper:
+    """Research-only DICOM edge -> SYNCMLCE ENDTYPE=0 cylinder mapper.
+
+    This uses exact source-ray tangency for a cylindrical tip.  It is not a
+    commissioned Agility mapper and must not be selected by a clinical default.
+
+    Bank identity is explicit because DICOM bank order must never be inferred
+    from the current sign of a moving/interdigitating leaf position.
+    """
+
+    sad_mm: float
+    radius_cm: float
+    cylinder_axis_z_cm: float
+    negative_bank: int
+
+    def __post_init__(self) -> None:
+        if not np.isfinite(self.sad_mm) or self.sad_mm <= 0:
+            raise ValueError("sad_mm must be finite and positive.")
+        if self.negative_bank not in {1, 2}:
+            raise ValueError("negative_bank must be 1 or 2.")
+
+        # Validate physical radius/CIL constraints immediately.
+        RoundedLeafTipTangentGeometry(
+            sad_cm=self.sad_mm / 10.0,
+            radius_cm=self.radius_cm,
+            cylinder_axis_z_cm=self.cylinder_axis_z_cm,
+        )
+
+    def map_banks(self, banks: DicomBankPositions) -> SyncMlceOpening:
+        geometry = RoundedLeafTipTangentGeometry(
+            sad_cm=self.sad_mm / 10.0,
+            radius_cm=self.radius_cm,
+            cylinder_axis_z_cm=self.cylinder_axis_z_cm,
+        )
+
+        bank1_iso_cm = np.asarray(banks.bank1_mm, dtype=np.float64) / 10.0
+        bank2_iso_cm = np.asarray(banks.bank2_mm, dtype=np.float64) / 10.0
+
+        if self.negative_bank == 1:
+            negative_edge = bank1_iso_cm
+            positive_edge = bank2_iso_cm
+        else:
+            negative_edge = bank2_iso_cm
+            positive_edge = bank1_iso_cm
+
+        negative_origin = geometry.projected_edge_to_cylinder_origin_cm(
+            negative_edge,
+            opening_side="negative",
+        )
+        positive_origin = geometry.projected_edge_to_cylinder_origin_cm(
+            positive_edge,
+            opening_side="positive",
+        )
+
+        return SyncMlceOpening(
+            negative_cm=np.asarray(negative_origin, dtype=np.float64),
+            positive_cm=np.asarray(positive_origin, dtype=np.float64),
         )
 
 
