@@ -22,6 +22,7 @@ from .source21 import (
     render_source21_control_points,
     validate_synchronized_mu_indices,
 )
+from .source21_orientation import ZhanHfsSource21OrientationMapper
 from .source21_reference import (
     CoplanarHfsReferenceAngles,
     coplanar_hfs_reference_angles,
@@ -69,6 +70,7 @@ __all__ = [
     "SyncMlceSequence",
     "SyncMlceSequencePoint",
     "ThreeDDose",
+    "ZhanHfsSource21OrientationMapper",
     "assert_reference_geometry_matches",
     "build_source21_control_points",
     "build_syncjaws_sequence",
