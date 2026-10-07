@@ -118,6 +118,25 @@ class RoundedLeafTipTangentGeometry:
         slope = np.where(valid1, m1, m2)
         return slope * self.sad_cm
 
+    def tangent_point_cm(
+        self,
+        projected_edge_cm: np.ndarray | float,
+        cylinder_origin_cm: np.ndarray | float,
+    ) -> tuple[np.ndarray, np.ndarray]:
+        """Return the source-ray tangent point (x, z) on the cylinder."""
+
+        x_iso = np.asarray(projected_edge_cm, dtype=np.float64)
+        c = np.asarray(cylinder_origin_cm, dtype=np.float64)
+        if not np.all(np.isfinite(x_iso)) or not np.all(np.isfinite(c)):
+            raise ValueError("Tangent-point inputs must be finite.")
+
+        m = x_iso / self.sad_cm
+        z_tangent = (
+            c * m + self.cylinder_axis_z_cm
+        ) / (1.0 + m * m)
+        x_tangent = m * z_tangent
+        return x_tangent, z_tangent
+
     def tangent_distance_cm(
         self,
         projected_edge_cm: np.ndarray | float,
@@ -129,6 +148,31 @@ class RoundedLeafTipTangentGeometry:
         c = np.asarray(cylinder_origin_cm, dtype=np.float64)
         m = x_iso / self.sad_cm
         return np.abs(c - m * self.cylinder_axis_z_cm) / np.sqrt(1.0 + m * m)
+
+    def tangent_within_leaf_slab(
+        self,
+        projected_edge_cm: np.ndarray | float,
+        cylinder_origin_cm: np.ndarray | float,
+        *,
+        zmin_cm: float,
+        zmax_cm: float,
+        tolerance_cm: float = 1e-9,
+    ) -> np.ndarray:
+        """Check that the tangent point lies on the physical rounded-tip slab."""
+
+        if not (0.0 < zmin_cm < zmax_cm):
+            raise ValueError("Leaf slab requires 0 < zmin_cm < zmax_cm.")
+        if tolerance_cm < 0:
+            raise ValueError("tolerance_cm must be non-negative.")
+
+        _, z_tangent = self.tangent_point_cm(
+            projected_edge_cm,
+            cylinder_origin_cm,
+        )
+        return (
+            (z_tangent >= zmin_cm - tolerance_cm)
+            & (z_tangent <= zmax_cm + tolerance_cm)
+        )
 
 
 def agility_literature_tangent_geometry(
