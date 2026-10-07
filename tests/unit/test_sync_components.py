@@ -295,3 +295,47 @@ def test_research_rounded_mapper_bank_identity_is_explicit() -> None:
 
     np.testing.assert_allclose(restored_negative, [-4.0], atol=1e-11)
     np.testing.assert_allclose(restored_positive, [3.0], atol=1e-11)
+
+
+
+def test_research_rounded_mapper_applies_explicit_projected_shift() -> None:
+    from indep_mu.beam_model.iec_coordinates import DicomBankPositions
+
+    banks = DicomBankPositions(
+        bank1_mm=np.asarray([-50.0]),
+        bank2_mm=np.asarray([50.0]),
+    )
+    mapper = ResearchRoundedTipSyncMlceMapper(
+        sad_mm=1000.0,
+        radius_cm=17.0,
+        cylinder_axis_z_cm=34.93,
+        negative_bank=1,
+        projected_edge_shift_mm=0.405,
+    )
+
+    opening = mapper.map_banks(banks)
+    geometry = RoundedLeafTipTangentGeometry(
+        sad_cm=100.0,
+        radius_cm=17.0,
+        cylinder_axis_z_cm=34.93,
+    )
+
+    negative_edge_cm = geometry.cylinder_origin_to_projected_edge_cm(
+        opening.negative_cm,
+        opening_side="negative",
+    )
+    positive_edge_cm = geometry.cylinder_origin_to_projected_edge_cm(
+        opening.positive_cm,
+        opening_side="positive",
+    )
+
+    np.testing.assert_allclose(
+        negative_edge_cm,
+        [(-50.0 + 0.405) / 10.0],
+        atol=1e-11,
+    )
+    np.testing.assert_allclose(
+        positive_edge_cm,
+        [(50.0 + 0.405) / 10.0],
+        atol=1e-11,
+    )
