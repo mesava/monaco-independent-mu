@@ -5,6 +5,7 @@ from .dose_difference import (
     DoseDifferenceSummary,
     compare_on_rtdose_grid,
 )
+from .dose_quantity import DoseQuantity, require_matching_dose_quantity
 from .dvh import (
     DvhMetrics,
     StructureDoseSamples,
@@ -17,6 +18,7 @@ from .mc_grid import PatientMcDoseGridGy
 __all__ = [
     "DoseDifferenceResult",
     "DoseDifferenceSummary",
+    "DoseQuantity",
     "DvhMetrics",
     "GammaConfig",
     "GammaResult",
@@ -25,6 +27,7 @@ __all__ = [
     "compare_on_rtdose_grid",
     "dvh_metrics",
     "gamma_pass_rate",
+    "require_matching_dose_quantity",
     "run_gamma_on_rtdose_grid",
     "sample_structure_dose_gy",
 ]
