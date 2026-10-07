@@ -67,6 +67,10 @@ def _beam(control_points: tuple[ControlPoint, ...]) -> Beam:
         beam_meterset_mu=200.0,
         fluence_mode="STANDARD",
         fluence_mode_id=None,
+        number_of_wedges=0,
+        number_of_compensators=0,
+        number_of_boli=0,
+        number_of_blocks=0,
         device_definitions=(
             BeamLimitingDeviceDefinition(
                 device_type="MLCX",
