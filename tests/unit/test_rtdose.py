@@ -100,3 +100,52 @@ def test_nonzero_relative_offset_is_rejected_for_oblique_grid(
 
     with pytest.raises(ValueError, match="neither DICOM relative option"):
         load_rtdose(path)
+
+
+def test_patient_coordinate_sampling_matches_voxel_centres(tmp_path: Path) -> None:
+    path = tmp_path / "dose.dcm"
+    _write_dose(path, offsets=[0.0, 2.5])
+
+    dose = load_rtdose(path)
+
+    points = np.asarray(
+        [
+            dose.geometry.voxel_center_patient_mm(0, 0, 0),
+            dose.geometry.voxel_center_patient_mm(1, 1, 2),
+        ]
+    )
+    sampled = dose.sample_patient_points_gy(points)
+
+    assert sampled[0] == pytest.approx(dose.dose[0, 0, 0])
+    assert sampled[1] == pytest.approx(dose.dose[1, 1, 2])
+
+
+def test_patient_to_local_coordinates_for_oblique_grid(tmp_path: Path) -> None:
+    path = tmp_path / "dose.dcm"
+    _write_dose(
+        path,
+        offsets=[0.0, 2.5],
+        orientation=(0.0, 1.0, 0.0, 0.0, 0.0, 1.0),
+    )
+
+    dose = load_rtdose(path)
+    patient_point = dose.geometry.voxel_center_patient_mm(1, 1, 2)
+    local = dose.geometry.patient_to_local_mm(patient_point)
+
+    # column index 2 -> 6 mm, row index 1 -> 2 mm, frame offset -> 2.5 mm
+    np.testing.assert_allclose(local[0], [6.0, 2.0, 2.5])
+
+
+def test_dose_gy_rejects_relative_units(tmp_path: Path) -> None:
+    path = tmp_path / "dose.dcm"
+    _write_dose(path, offsets=[0.0, 2.5])
+
+    import pydicom
+
+    dataset = pydicom.dcmread(path)
+    dataset.DoseUnits = "RELATIVE"
+    dataset.save_as(path, enforce_file_format=True)
+
+    dose = load_rtdose(path)
+    with pytest.raises(ValueError, match="absolute Gy"):
+        _ = dose.dose_gy
