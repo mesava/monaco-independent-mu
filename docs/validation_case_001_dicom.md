@@ -172,3 +172,56 @@ beam. Для M5 позднее понадобится экспорт TPS dose pe
 3. сформировать machine transport input для этого 8-field DMLC IMRT;
 4. сравнить independent MC с plan RTDOSE;
 5. отдельно получить per-beam TPS dose для M5.
+
+
+## Предварительный CT-derived external-mask прогон
+
+Исходный архив повторно распакован локально и current research algorithm
+воспроизведён непосредственно на pixel data CT без коммита DICOM в Git.
+
+Конфигурация:
+
+- seed: общий treatment isocenter **(-71.3, -84.5, +100.0) mm**;
+- threshold: **-500 HU**;
+- 3-D closing iterations: **1**;
+- 6-connected component;
+- enclosed holes filled per axial slice.
+
+Получено:
+
+- CT observed HU range: **-3024 ... +3071 HU**;
+- HU в voxel ближайшем к isocenter: **-821 HU**;
+- поэтому seed находится в low-density lung region и не принадлежит
+  thresholded component;
+- nearest-tissue snap distance: **2.210 mm**;
+- selected component before per-slice hole fill: **5,898,483 voxels**;
+- after fill: **6,435,424 voxels**;
+- volume: **39,278.71 cm³**;
+- mask does **not** touch CT volume border;
+- mask z extent: **-210 ... +250 mm**;
+- HU range inside the filled mask: **-1024 ... +3071 HU**.
+
+Последний пункт важен: scanner calibration DRT120kV имеет measured range
+**-1000 ... +2009 HU**, поэтому real patient mask содержит voxels за обоими
+концами calibration table. Production code не должен молча это скрывать:
+counts ниже/выше calibration range выводятся отдельно, а endpoint clipping
+разрешается только явной policy.
+
+### Интерпретация
+
+Seed-snap механизм для этого case оказался действительно необходимым:
+treatment isocenter расположен в лёгком и имеет HU ниже -500.
+
+Полученный объём около 39.3 L физически правдоподобен для длинного breast/chest
+CT с руками, но **сам по себе не доказывает отсутствие CT couch/support в
+маске**. Поэтому результат пока имеет статус:
+
+    RESEARCH_MASK_DERIVED_NOT_VALIDATED
+
+До записи patient .egsphant как validation artifact необходимо:
+
+1. прогнать threshold sensitivity;
+2. проверить posterior support contamination;
+3. зафиксировать counts HU < -1000 и HU > 2009 внутри mask;
+4. только затем выбрать явную out-of-range policy и material-mixture
+   discretisation.
