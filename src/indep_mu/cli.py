@@ -10,6 +10,7 @@ from indep_mu.dicom.plan_validation import run_plan_preflight
 from indep_mu.dicom.rtplan import load_rtplan
 from indep_mu.dicom.rtstruct import list_rtstruct_rois
 from indep_mu.patient_model.hu_red import DRT120KV
+from indep_mu.workflow.patient_build import build_patient_artifacts
 from indep_mu.workflow.preflight import run_transport_preflight
 
 
@@ -38,6 +39,71 @@ def list_rois(dicom_directory: Path) -> None:
 
     for roi in rois:
         click.echo(f"{roi.roi_number:4d}  {roi.roi_name}")
+
+
+@main.command("build-patient")
+@click.argument(
+    "dicom_directory",
+    type=click.Path(exists=True, file_okay=False, path_type=Path),
+)
+@click.argument(
+    "output_directory",
+    type=click.Path(file_okay=False, path_type=Path),
+)
+@click.option(
+    "--patient-roi",
+    required=True,
+    help="Exact RTSTRUCT ROI name used as the external patient contour.",
+)
+@click.option(
+    "--mixture-bins",
+    required=True,
+    type=click.IntRange(min=1),
+    help="Material-mixture quantisation; must come from sensitivity validation.",
+)
+@click.option(
+    "--out-of-range",
+    type=click.Choice(["raise", "clip"], case_sensitive=False),
+    default="raise",
+    show_default=True,
+    help="Policy for patient voxels outside the measured HU calibration.",
+)
+@click.option(
+    "--overwrite",
+    is_flag=True,
+    help="Replace an existing patient-model artifact set.",
+)
+def build_patient(
+    dicom_directory: Path,
+    output_directory: Path,
+    patient_roi: str,
+    mixture_bins: int,
+    out_of_range: str,
+    overwrite: bool,
+) -> None:
+    """Построить .egsphant и PEGSless media из DICOM CT/RTSTRUCT."""
+
+    try:
+        result = build_patient_artifacts(
+            dicom_directory,
+            output_directory,
+            patient_roi_name=patient_roi,
+            mixture_bins=mixture_bins,
+            out_of_range=out_of_range.lower(),
+            overwrite=overwrite,
+        )
+    except (ValueError, OSError) as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    click.echo(f"egsphant:      {result.egsphant_path}")
+    click.echo(f"media:         {result.media_definition_path}")
+    click.echo(f"summary:       {result.summary_path}")
+    click.echo(f"media count:   {result.medium_count}")
+    click.echo(f"patient volume:{result.patient_volume_cm3:.3f} cm3")
+    click.echo(
+        "HU outside LUT: "
+        f"low={result.low_hu_count}, high={result.high_hu_count}"
+    )
 
 
 @main.command("inspect")
