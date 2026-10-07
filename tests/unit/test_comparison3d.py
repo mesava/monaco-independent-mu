@@ -6,6 +6,7 @@ from indep_mu.comparison3d import (
     compare_on_rtdose_grid,
     dvh_metrics,
 )
+from indep_mu.comparison3d.dose_quantity import DoseQuantity
 from indep_mu.comparison3d.dvh import StructureDoseSamples
 from indep_mu.dicom.rtdose import DoseGeometry, RtDose
 from indep_mu.montecarlo.threedose import ThreeDDose
@@ -35,6 +36,7 @@ def _mc_grid() -> PatientMcDoseGridGy:
             z_direction_patient=(0.0, 0.0, 1.0),
         ),
         frame_of_reference_uid="1.2.3",
+        dose_quantity=DoseQuantity.DOSE_TO_MEDIUM,
     )
 
 
@@ -65,9 +67,15 @@ def test_dvh_percentile_semantics() -> None:
 
 
 class _ScaledPatientSampler:
-    def __init__(self, scale: float, uid: str) -> None:
+    def __init__(
+        self,
+        scale: float,
+        uid: str,
+        dose_quantity: DoseQuantity = DoseQuantity.DOSE_TO_MEDIUM,
+    ) -> None:
         self.scale = scale
         self.frame_of_reference_uid = uid
+        self.dose_quantity = dose_quantity
 
     def sample_patient_points_gy(self, points_patient_mm: np.ndarray) -> np.ndarray:
         points = np.asarray(points_patient_mm, dtype=np.float64)
@@ -128,6 +136,7 @@ def test_voxelwise_difference_keeps_tps_as_reference_grid() -> None:
     result = compare_on_rtdose_grid(
         reference,
         _ScaledPatientSampler(1.02, reference.frame_of_reference_uid),
+        reference_dose_quantity=DoseQuantity.DOSE_TO_MEDIUM,
         threshold_fraction_of_reference_max=0.0,
     )
 
@@ -152,4 +161,32 @@ def test_voxelwise_difference_rejects_frame_mismatch() -> None:
         compare_on_rtdose_grid(
             reference,
             _ScaledPatientSampler(1.0, "different"),
+            reference_dose_quantity=DoseQuantity.DOSE_TO_MEDIUM,
+        )
+
+
+
+def test_voxelwise_difference_requires_explicit_tps_dose_quantity() -> None:
+    reference = _synthetic_rtdose()
+
+    with pytest.raises(ValueError, match="TPS dose quantity is unknown"):
+        compare_on_rtdose_grid(
+            reference,
+            _ScaledPatientSampler(1.0, reference.frame_of_reference_uid),
+            reference_dose_quantity=None,
+        )
+
+
+def test_voxelwise_difference_rejects_dose_quantity_mismatch() -> None:
+    reference = _synthetic_rtdose()
+
+    with pytest.raises(ValueError, match="Dose quantity mismatch"):
+        compare_on_rtdose_grid(
+            reference,
+            _ScaledPatientSampler(
+                1.0,
+                reference.frame_of_reference_uid,
+                DoseQuantity.DOSE_TO_WATER,
+            ),
+            reference_dose_quantity=DoseQuantity.DOSE_TO_MEDIUM,
         )
