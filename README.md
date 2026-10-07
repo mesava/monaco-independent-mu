@@ -105,12 +105,22 @@ multi-ROI        gamma/DVH
 - 8-field 6-MV dynamic-MLC IMRT;
 - Agility MLCX: 80 pairs × 5 mm, span 400 mm;
 - plan RTDOSE в Gy;
-- RTSTRUCT без external/BODY/patient ROI.
+- RTSTRUCT без external/BODY/patient ROI;
+- DICOM MLC reference plane = 349 mm, что согласуется в пределах 0.3 mm с
+  опубликованным Agility centre-of-curvature 349.3 mm;
+- один RTDOSE уровня PLAN в Gy, но без per-beam dose.
 
-Последний пункт выявил реальный workflow gap. Для него добавлен только
-явно выбираемый research CT-derived external-mask path, seeded by treatment
-isocenter. Он не является клиническим default и должен быть независимо
-проверен до использования.
+Последний пункт по RTSTRUCT выявил реальный workflow gap. Для него добавлен
+только явно выбираемый research CT-derived external-mask path, seeded by
+treatment isocenter. Он не является клиническим default и должен быть
+независимо проверен до использования.
+
+Для последующих экспортов добавлена команда `indep-mu fingerprint`, которая
+формирует обезличенный технический fingerprint CT/RTSTRUCT/RTPLAN/RTDOSE.
+
+Для M6 также введён обязательный gate физической dose quantity: TPS и
+independent MC должны явно совпадать как dose-to-medium либо dose-to-water.
+По стандартному RTDOSE этот режим не угадывается.
 
 Подробности: docs/validation_case_001_dicom.md.
 
