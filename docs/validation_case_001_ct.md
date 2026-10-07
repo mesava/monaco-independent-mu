@@ -1,88 +1,48 @@
-# Validation case 001 — CT и внешний контур пациента
+# Validation case 001 — CT / RTSTRUCT
 
-В репозитории хранятся только агрегированные физико-технические результаты.
-Исходные DICOM и идентификаторы пациента не коммитятся.
+> **Статус: НЕ ВЕРИФИЦИРОВАНО.**
+>
+> Этот файл ранее содержал численные характеристики пациентской CT/RTSTRUCT,
+> но в текущей воспроизводимой цепочке нет доступного raw DICOM набора, на
+> котором эти числа можно заново получить и проверить. Поэтому прежние
+> численные значения не считаются результатом проекта и не должны
+> использоваться для физического или клинического вывода.
 
-## CT
+## Что уже реализовано в коде
 
-- CT-срезов: 140;
-- матрица: 512 × 512;
-- PixelSpacing: 0.935547 × 0.935547 мм;
-- spacing вдоль нормали: 2.5 мм;
-- ориентация: axial;
-- PatientPosition: HFS;
-- KVP: 120;
-- RescaleSlope: 1;
-- RescaleIntercept: −1024;
-- один CT SeriesInstanceUID;
-- один FrameOfReferenceUID;
-- диапазон координаты вдоль нормали: −150.0 … +197.5 мм.
+Для реального validation case проект теперь умеет воспроизводимо:
 
-## RTSTRUCT / Patient ROI
+- найти DICOM case и пройти цепочку RTPLAN → RTSTRUCT → referenced CT series;
+- загрузить выбранный CT SeriesInstanceUID, не смешивая соседние CT series;
+- сортировать CT по ImageOrientationPatient / ImagePositionPatient;
+- применять RescaleSlope / RescaleIntercept;
+- проверять FrameOfReferenceUID, геометрию и равномерность slice spacing;
+- перечислять ROI без сохранения PatientName/PatientID;
+- растеризовать CLOSED_PLANAR / CLOSEDPLANAR_XOR RTSTRUCT ROI;
+- применить scanner-specific DRT120kV HU → RED calibration;
+- построить RED → mass density → material model;
+- явно учитывать HU вне measured calibration range;
+- сформировать de-identified .egsphant, PEGSless media и JSON summary.
 
-- ROI `patient` присутствует;
-- 169 CLOSED_PLANAR контуров;
-- контуры ссылаются на все 140 CT-срезов;
-- все 169 ссылок ContourImageSequence разрешаются в CT SOPInstanceUID;
-- несколько срезов содержат более одного замкнутого контура, поэтому маска
-  строится как объединение CLOSED_PLANAR полигонов на соответствующем срезе.
+## Что требуется для закрытия case 001
 
-## HU внутри Patient ROI
+Нужен повторный запуск на исходном пациентском DICOM наборе, доступном
+вычислительной среде. После этого в этот файл можно записывать только
+результаты, автоматически полученные текущей версией кода:
 
-После растеризации внешнего контура на нативной CT-сетке:
+1. CT series UID / FrameOfReference consistency;
+2. shape, spacing, orientation, KVP;
+3. ROI name, contour count, rasterized volume;
+4. HU min/max и out-of-calibration counts внутри Patient ROI;
+5. mass-density range и material statistics;
+6. hashes сгенерированных patient-model artifacts;
+7. git commit, которым выполнен расчёт.
 
-- вокселей внутри Patient ROI: **9 643 304**;
-- объём по voxel mask: **≈ 21 100.71 см³**;
-- HU min: **−3024**;
-- HU max: **+3071**;
-- HU mean: **≈ −139.76**;
-- ниже нижней точки CT calibration (−1000 HU): **791** воксель
-  (**≈ 0.00820%** Patient ROI);
-- выше верхней точки CT calibration (+2009 HU): **1086** вокселей
-  (**≈ 0.01126%** Patient ROI).
+До такого повторного запуска **M1 остаётся реализованным на уровне кода и
+synthetic integration tests, но не закрытым как real-patient validation**.
 
-Из 1086 high-density вокселей 1083 расположены на четырёх самых верхних
-анализируемых уровнях z = 190.0, 192.5, 195.0 и 197.5 мм; ещё 3 находятся на
-z = 175.0 мм.
+## Политика данных пациента
 
-## Интерпретация
-
-Значения вне диапазона CT-to-RED таблицы существуют **внутри внешнего контура**,
-поэтому их нельзя просто отбросить как фон за пределами пациента.
-
-На данном этапе им не присваивается материал автоматически. Они должны пройти
-отдельную обработку out-of-calibration policy. До её утверждения patient model
-не имеет права выполнять скрытую экстраполяцию HU → RED.
-
-Следующий этап:
-
-1. проверить DICOM Pixel Padding / реконструкционные sentinel values;
-2. локализовать out-of-range voxels;
-3. определить безопасную policy для HU < −1000 и HU > +2009;
-4. после этого выполнять HU → RED → mass density → material map.
-
-
-## Утверждённая обработка out-of-range HU
-
-После сверки с официальным обучающим материалом Elekta для Monaco pMC
-зафиксировано следующее поведение:
-
-- HU ниже минимальной точки CT-to-ED таблицы получает минимальный RED;
-- HU выше максимальной точки получает максимальный RED;
-- внутри диапазона используется интерполяция.
-
-Для текущей DRT120kV таблицы это означает:
-
-- HU < −1000 → RED = 0.001;
-- HU > +2009 → RED = 2.335.
-
-При этом независимый QA layer **не скрывает** факт clipping: количество и доля
-таких вокселей остаются в отчёте.
-
-Следовательно, 791 low-HU и 1086 high-HU voxels не блокируют построение
-Monaco-matched patient model, но остаются отдельным QA warning.
-
-После RED → mass-density преобразования верхняя точка RED=2.335 соответствует
-rho ≈ 2.5706 g/cm3. По текущему Patient LUT этот диапазон находится внутри
-BoneCorticalIcrp (1.85–3.0 g/cm3), то есть clipping не переводит эти voxels
-в Titanium/Steel/Lead.
+Исходные DICOM и персональные идентификаторы не коммитятся в репозиторий.
+В Git допускаются только обезличенные конфигурации и агрегированные результаты,
+которые можно воспроизвести из локального validation dataset.
