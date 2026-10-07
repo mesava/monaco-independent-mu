@@ -90,3 +90,26 @@ sanity-check'ом экспортированных позиций.
 - Paschal HMP et al. *Monte Carlo modeling of the Elekta Versa HD and patient
   dose calculation with EGSnrc/BEAMnrc.* J Appl Clin Med Phys. 2022.
   DOI: 10.1002/acm2.13715.
+
+
+## Проверка против реального Monaco RTPLAN
+
+Validation case 001 экспортирует для MLCX:
+
+    SourceToBeamLimitingDeviceDistance = 349 mm
+
+Это находится всего на 0.3 mm от опубликованного расстояния до центра
+кривизны Agility rounded tip:
+
+    CIL = 349.3 mm
+
+Такое согласие является полезной независимой cross-check: DICOM reference
+plane MLC практически совпадает с опубликованным centre-of-curvature plane.
+
+Однако DICOM определяет (300A,00BA) как расстояние от radiation source до
+beam-limiting device в целом. Этот tag сам по себе не определяет upstream/downstream
+physical surface и поэтому **не заменяет** zmin/zmax физической leaf geometry.
+
+В validator добавлена проверка MLC source distance около 349.3 mm с
+1-mm tolerance. Она проверяет delivery geometry, но не объявляет DICOM
+distance физической толщиной leaf.
