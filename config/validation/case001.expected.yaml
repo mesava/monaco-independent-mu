@@ -1,0 +1,53 @@
+schema_version: 1
+case_id: validation_case_001
+status: METADATA_VERIFIED_FROM_UPLOADED_DICOM
+
+ct:
+  slice_count: 187
+  rows: 512
+  columns: 512
+  pixel_spacing_mm: [1.5625, 1.5625]
+  slice_spacing_mm: 2.5
+  patient_position: HFS
+  kvp: 120.0
+  image_orientation_patient: [1.0, 0.0, 0.0, 0.0, 1.0, 0.0]
+
+rtstruct:
+  roi_count: 14
+  external_roi_present: false
+
+rtplan:
+  number_of_fractions_planned: 25
+  beam_count: 8
+  total_mu_per_fraction: 694.867399
+  expected_energy_model_id: 6MV
+  expected_delivery_class: DYNAMIC_MLC
+  common_isocenter_mm: [-71.3, -84.5, 100.0]
+  mlc:
+    device_type: MLCX
+    leaf_pairs: 80
+    first_boundary_mm: -200.0
+    last_boundary_mm: 200.0
+    nominal_leaf_width_mm: 5.0
+    source_to_device_distance_mm: 349.0
+  y_jaws:
+    device_type: ASYMY
+    pair_count: 1
+    source_to_device_distance_mm: 470.0
+  beams:
+    - {beam_number: 1, mu: 127.458344, control_points: 30, gantry_deg: 51.0, collimator_deg: 348.0}
+    - {beam_number: 2, mu: 70.082390, control_points: 30, gantry_deg: 226.0, collimator_deg: 12.0}
+    - {beam_number: 3, mu: 58.973721, control_points: 29, gantry_deg: 206.0, collimator_deg: 10.0}
+    - {beam_number: 8, mu: 74.168732, control_points: 29, gantry_deg: 240.0, collimator_deg: 10.0}
+    - {beam_number: 4, mu: 45.371567, control_points: 18, gantry_deg: 75.0, collimator_deg: 348.0}
+    - {beam_number: 5, mu: 127.043335, control_points: 30, gantry_deg: 0.0, collimator_deg: 0.0}
+    - {beam_number: 6, mu: 98.906357, control_points: 32, gantry_deg: 270.0, collimator_deg: 0.0}
+    - {beam_number: 7, mu: 92.862953, control_points: 33, gantry_deg: 245.0, collimator_deg: 10.0}
+
+rtdose:
+  object_count: 1
+  dose_units: GY
+  dose_type: PHYSICAL
+  dose_summation_type: PLAN
+  per_beam_dose_available: false
+  dose_quantity: UNKNOWN
