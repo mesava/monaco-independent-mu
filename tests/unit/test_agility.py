@@ -32,7 +32,7 @@ def test_nominal_agility_boundaries_pass_core_checks(tmp_path: Path) -> None:
             leaf_position_boundaries_mm=tuple(
                 -200.0 + 5.0 * index for index in range(81)
             ),
-            source_to_device_distance_mm=item.source_to_device_distance_mm,
+            source_to_device_distance_mm=349.0,
         )
         if item.device_type == "MLCX"
         else item
@@ -46,3 +46,4 @@ def test_nominal_agility_boundaries_pass_core_checks(tmp_path: Path) -> None:
     assert report.leaf_pairs == 80
     assert report.nominal_leaf_width_mm == 5.0
     assert report.field_span_mm == 400.0
+    assert report.source_to_mlc_distance_mm == 349.0
