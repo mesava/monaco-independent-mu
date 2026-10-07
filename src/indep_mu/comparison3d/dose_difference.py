@@ -7,10 +7,13 @@ import numpy as np
 
 from indep_mu.dicom.rtdose import RtDose
 
+from .dose_quantity import DoseQuantity, require_matching_dose_quantity
+
 
 @runtime_checkable
 class PatientDoseSamplerGy(Protocol):
     frame_of_reference_uid: str
+    dose_quantity: DoseQuantity
 
     def sample_patient_points_gy(self, points_patient_mm: np.ndarray) -> np.ndarray:
         ...
@@ -30,6 +33,7 @@ class DoseDifferenceSummary:
 
 @dataclass(frozen=True)
 class DoseDifferenceResult:
+    dose_quantity: DoseQuantity
     reference_dose_gy: np.ndarray
     evaluated_dose_gy: np.ndarray
     difference_gy: np.ndarray
@@ -67,9 +71,15 @@ def compare_on_rtdose_grid(
     reference: RtDose,
     evaluated: PatientDoseSamplerGy,
     *,
+    reference_dose_quantity: DoseQuantity | None,
     threshold_fraction_of_reference_max: float = 0.10,
 ) -> DoseDifferenceResult:
     """Sample independent MC dose at native Monaco RTDOSE voxel centres."""
+
+    dose_quantity = require_matching_dose_quantity(
+        reference_dose_quantity,
+        evaluated.dose_quantity,
+    )
 
     if reference.frame_of_reference_uid != evaluated.frame_of_reference_uid:
         raise ValueError(
@@ -127,6 +137,7 @@ def compare_on_rtdose_grid(
     )
 
     return DoseDifferenceResult(
+        dose_quantity=dose_quantity,
         reference_dose_gy=reference_gy.copy(),
         evaluated_dose_gy=evaluated_gy,
         difference_gy=difference,
