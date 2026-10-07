@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from indep_mu.beam_model.agility import validate_agility_dicom_geometry
+from indep_mu.beam_model.machine import resolve_energy_model
 from indep_mu.dicom.ct import CtSeries
 from indep_mu.dicom.rtplan import RtPlan
 from indep_mu.montecarlo.source21_orientation import (
@@ -45,6 +47,44 @@ def run_transport_preflight(
     """Check case features that gate the current HFS/source21 transport path."""
 
     messages: list[TransportPreflightMessage] = []
+
+    machine_names = {
+        beam.treatment_machine_name
+        for beam in plan.beams
+        if beam.treatment_machine_name
+    }
+    if len(machine_names) > 1:
+        messages.append(
+            TransportPreflightMessage(
+                "ERROR",
+                "MULTIPLE_TREATMENT_MACHINES",
+                "RTPLAN treatment beams reference multiple TreatmentMachineName values.",
+            )
+        )
+
+    for beam in plan.beams:
+        geometry_report = validate_agility_dicom_geometry(beam)
+        for item in geometry_report.messages:
+            messages.append(
+                TransportPreflightMessage(
+                    item.severity,
+                    f"AGILITY_{item.code}",
+                    item.message,
+                    beam.number,
+                )
+            )
+
+        try:
+            resolve_energy_model(beam)
+        except ValueError as exc:
+            messages.append(
+                TransportPreflightMessage(
+                    "ERROR",
+                    "ENERGY_MODEL_UNRESOLVED",
+                    str(exc),
+                    beam.number,
+                )
+            )
 
     patient_position = ct.geometry.patient_position
     if patient_position is None:
