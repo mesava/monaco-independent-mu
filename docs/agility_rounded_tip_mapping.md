@@ -65,13 +65,26 @@ SYNCMLCE additionally:
 The project therefore does not yet feed DICOM Leaf/Jaw Positions through this
 formula directly into a clinical Agility sequence.
 
+The DICOM bank order is no longer left ambiguous: DICOM uses IEC element
+order 101..1N followed by 201..2N, and IEC 61217 defines the 1-side
+(X1/Y1) as the negative-axis edge and the 2-side (X2/Y2) as the
+positive-axis edge. The code therefore has a standards-based bank identity
+helper; this still needs vendor-export confirmation on the first real Monaco
+RTPLAN.
+
+The research mapper also accepts an explicit projected-edge shift. This is
+intended for the field-centre translation caused by leaf-bank tilt. The code
+does not infer the sign: the sign must be fixed by the validated machine-axis
+convention. For a 90 mm leaf thickness and LBROT=9 mrad the published
+magnitude is about 0.405 mm.
+
 The remaining items to verify are:
 
-- DICOM bank 1/2 to physical negative/positive bank identity;
 - exact Monaco/DICOM meaning of the nominal edge for eccentric Agility tips;
-- translation introduced by LBROT;
+- sign and application point of the LBROT field-centre shift;
 - interaction of the tangent transform with per-leaf focusing;
-- tongue-and-groove/step geometry.
+- tilted leaf-side/interleaf geometry;
+- agreement of the actual SYNCMLCE surface with projected field edges.
 
 ## Next validation step
 
@@ -90,5 +103,7 @@ For a static central leaf pair:
 - Gholampourkashi S et al. JACMP 2019. DOI 10.1002/acm2.12485.
 - Ohira S et al. In Vivo 2020. DOI 10.21873/invivo.12050.
 
-This module is intentionally research-only and is not connected to
-build_syncmlce_sequence.
+The research mapper is accepted by build_syncmlce_sequence only when selected
+explicitly by the caller. No clinical/default configuration selects it, and
+head-geometry readiness still blocks production use until transport validation
+is complete.
