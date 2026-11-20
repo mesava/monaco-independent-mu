@@ -296,6 +296,7 @@ def patient_qc_png(
 
     from indep_mu.patient_model.external_mask import derive_external_mask_from_ct
     from indep_mu.patient_model.mask_preview import render_external_mask_montage
+    from indep_mu.patient_model.mask_qc import review_patient_mask
     from indep_mu.workflow.patient_diagnostics import _load_case
 
     try:
@@ -306,10 +307,12 @@ def patient_qc_png(
             threshold_hu=threshold_hu,
             closing_iterations=closing_iterations,
         )
+        qa = review_patient_mask(ct, derived.mask)
         slices = render_external_mask_montage(
             ct,
             derived.mask,
             output_png,
+            priority_slice_indices=qa.posterior_island_slice_indices,
             overwrite=overwrite,
         )
     except (ValueError, OSError, RuntimeError) as exc:
@@ -317,6 +320,11 @@ def patient_qc_png(
 
     click.echo(f"Local QC PNG: {output_png}")
     click.echo(f"Selected CT slices: {slices}")
+    click.echo(
+        "Suspicious posterior islands already INSIDE mask: "
+        f"{qa.posterior_island_voxel_count} voxels on "
+        f"{len(qa.posterior_island_slice_indices)} slices."
+    )
     click.echo(
         "RESEARCH ONLY. Inspect patient/table separation manually; "
         "this is NOT automatic couch clearance."
