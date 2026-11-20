@@ -90,6 +90,30 @@ MANUAL_REVIEW_REQUIRED
 PNG из CT остаётся медицинским изображением, даже если убрать DICOM
 идентификаторы: хранить только в защищённом локальном контуре.
 
+## Явное создание только исследовательского фантома
+
+Поскольку внешняя маска ещё не прошла визуальную проверку, команда
+`build-patient` по умолчанию **отвергает** CT-derived external-mask.
+Чтобы выполнить исключительно исследовательский прогон, необходимо явно
+подтвердить риск:
+
+```bash
+indep-mu build-patient /secure/case001 /secure/research-phantom \
+  --derive-external-from-isocenter \
+  --acknowledge-unvalidated-external-mask \
+  --mixture-bins 9 \
+  --out-of-range clip
+```
+
+Значение `mixture-bins 9` здесь является **только примером CLI синтаксиса**,
+а не выбранным по результатам sensitivity study значением. То же относится
+к `--out-of-range clip`: это явная исследовательская политика, пока не
+оценены реальные outside-calibration HU и доза.
+
+Наличие `--acknowledge-unvalidated-external-mask` означает только
+осознанное создание исследовательских файлов. Оно не меняет
+`validation_status = RESEARCH_ONLY` и не разрешает клиническое применение.
+
 ## Gate перед созданием validation .egsphant
 
 `M1_REAL_PATIENT_VALIDATED` выставлять нельзя до:
