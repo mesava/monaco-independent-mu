@@ -20,7 +20,7 @@ jobs:
       - name: Install package and test dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -e ".[dev]"
+          pip install -e ".[dev,qc]"
 
       - name: Run unit tests
         run: pytest -q
