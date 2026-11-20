@@ -27,7 +27,12 @@ Thumbs.db
 data/raw/
 data/patients/
 data/clinical/
+data/qa_patient/
 results/patient_*/
+results/case*/
+*mask_review*.png
+*mask_review*.json
+*patient_qc*.png
 
 # Monte Carlo large/binary outputs
 *.egsphant
