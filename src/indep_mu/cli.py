@@ -262,7 +262,7 @@ def patient_diagnostics(
             "rows": [asdict(item) for item in rows],
         }
         output.write_text(
-            json.dumps(report, indent=2, ensure_ascii=False) + "\\n",
+            json.dumps(report, indent=2, ensure_ascii=False) + chr(10),
             encoding="utf-8",
         )
         click.echo(f"Local JSON: {output}")
