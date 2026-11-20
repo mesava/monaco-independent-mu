@@ -79,6 +79,4 @@ def dcmread_rt(
     if not hasattr(ds, "file_meta") or ds.file_meta is None:
         ds.file_meta = FileMetaDataset()
     ds.file_meta.TransferSyntaxUID = ImplicitVRLittleEndian
-    ds.is_implicit_VR = True
-    ds.is_little_endian = True
     return ds
