@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from dataclasses import asdict
 from pathlib import Path
 
 import click
@@ -207,10 +208,17 @@ def validate_baseline(
     default=1,
     show_default=True,
 )
+@click.option(
+    "--output",
+    type=click.Path(dir_okay=False, path_type=Path),
+    default=None,
+    help="Write a local de-identified JSON report; do not commit patient outputs.",
+)
 def patient_diagnostics(
     dicom_directory: Path,
     thresholds_hu: tuple[float, ...],
     closing_iterations: int,
+    output: Path | None,
 ) -> None:
     """Проверить CT-derived external mask без создания egsphant."""
 
@@ -224,19 +232,40 @@ def patient_diagnostics(
         raise click.ClickException(str(exc)) from exc
 
     click.echo(
-        "threshold  volume_cm3  seed_snap_mm  HU[min,max]  "
-        "out_low  out_high  border"
+        "threshold  volume_cm3  Dice_vs_ref  volume_delta_%  "
+        "out_low  out_high  posterior_vox  posterior_slices  border"
     )
     for item in rows:
         click.echo(
             f"{item.threshold_hu:9.1f}  "
             f"{item.volume_cm3:10.3f}  "
-            f"{item.seed_to_selected_component_distance_mm:12.3f}  "
-            f"[{item.body_hu_min:.0f},{item.body_hu_max:.0f}]  "
+            f"{item.dice_vs_reference or 0:11.6f}  "
+            f"{item.relative_volume_change_percent or 0:14.3f}  "
             f"{item.below_calibration_count:7d}  "
             f"{item.above_calibration_count:8d}  "
+            f"{item.posterior_survey_voxel_count:13d}  "
+            f"{item.posterior_survey_slice_count:16d}  "
             f"{item.touches_ct_border}"
         )
+    click.echo(
+        "Support status: MANUAL_REVIEW_REQUIRED. "
+        "A zero posterior-survey count does NOT exclude a connected couch."
+    )
+
+    if output is not None:
+        output.parent.mkdir(parents=True, exist_ok=True)
+        report = {
+            "schema_version": 1,
+            "research_only": True,
+            "support_clearance": "MANUAL_REVIEW_REQUIRED",
+            "out_of_range_policy": "diagnostics_only_explicit_endpoint_clipping",
+            "rows": [asdict(item) for item in rows],
+        }
+        output.write_text(
+            json.dumps(report, indent=2, ensure_ascii=False) + "\\n",
+            encoding="utf-8",
+        )
+        click.echo(f"Local JSON: {output}")
 
 
 @main.command("build-patient")
