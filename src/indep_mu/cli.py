@@ -343,6 +343,11 @@ def patient_qc_png(
     help="Research-only CT-derived external mask seeded by common plan isocenter.",
 )
 @click.option(
+    "--acknowledge-unvalidated-external-mask",
+    is_flag=True,
+    help="Research only: acknowledge couch/support has NOT been independently cleared.",
+)
+@click.option(
     "--external-threshold-hu",
     type=float,
     default=-500.0,
@@ -377,6 +382,7 @@ def build_patient(
     output_directory: Path,
     patient_roi: str | None,
     derive_external_from_isocenter: bool,
+    acknowledge_unvalidated_external_mask: bool,
     external_threshold_hu: float,
     external_closing_iterations: int,
     mixture_bins: int,
@@ -395,6 +401,9 @@ def build_patient(
             output_directory,
             patient_roi_name=patient_roi,
             derive_external_from_isocenter=derive_external_from_isocenter,
+            acknowledge_unvalidated_external_mask=(
+                acknowledge_unvalidated_external_mask
+            ),
             external_threshold_hu=external_threshold_hu,
             external_closing_iterations=external_closing_iterations,
             mixture_bins=mixture_bins,
