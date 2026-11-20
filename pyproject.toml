@@ -33,6 +33,10 @@ gamma = [
   "pymedphys",
 ]
 
+qc = [
+  "matplotlib>=3.8",
+]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 
