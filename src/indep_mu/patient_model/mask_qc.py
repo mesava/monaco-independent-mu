@@ -11,6 +11,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 import numpy as np
+from scipy import ndimage
 
 from indep_mu.dicom.ct import CtSeries
 
@@ -27,6 +28,8 @@ class MaskQaReport:
     posterior_survey_voxel_count: int
     posterior_survey_slice_count: int
     posterior_survey_slice_indices: tuple[int, ...]
+    posterior_island_voxel_count: int = 0
+    posterior_island_slice_indices: tuple[int, ...] = ()
     support_review_status: str = "MANUAL_REVIEW_REQUIRED"
 
     @property
@@ -53,6 +56,78 @@ def _is_axial_hfs(ct: CtSeries) -> bool:
     return (
         (ct.geometry.patient_position or "").upper() == "HFS"
         and np.allclose(observed, expected, rtol=0.0, atol=1e-5)
+    )
+
+
+@dataclass(frozen=True)
+class PosteriorIslandSurvey:
+    suspicious_voxel_count: int
+    suspicious_slice_indices: tuple[int, ...]
+
+
+def survey_posterior_mask_islands(
+    mask: np.ndarray,
+    *,
+    min_component_voxels: int = 20,
+    min_component_width_voxels: int = 15,
+    gap_rows: int = 2,
+) -> PosteriorIslandSurvey:
+    """Flag detached posterior components already INCLUDED in a 3-D mask.
+
+    A mask selected as one 3-D connected component can be split into several
+    2-D components on many axial slices. This survey detects posterior
+    horizontal islands that are *inside* that 3-D component; the previous
+    outside-mask posterior survey could not detect these.
+
+    The largest per-slice 2-D component is a geometric reference only.
+    Findings are candidates, not confirmed couch pixels. A zero result
+    cannot clear an attached support object.
+    """
+
+    selected = np.asarray(mask, dtype=bool)
+    if selected.ndim != 3 or not selected.any():
+        raise ValueError("A non-empty 3-D mask is required.")
+    if min_component_voxels < 1 or min_component_width_voxels < 1:
+        raise ValueError("Component thresholds must be >= 1.")
+    if gap_rows < 0:
+        raise ValueError("gap_rows must be non-negative.")
+
+    structure = ndimage.generate_binary_structure(2, 2)
+    suspicious_voxels = 0
+    suspicious_slices: list[int] = []
+    for z_index in range(selected.shape[0]):
+        plane = selected[z_index]
+        labels, number = ndimage.label(plane, structure=structure)
+        if number < 2:
+            continue
+        sizes = np.bincount(labels.ravel())
+        sizes[0] = 0
+        reference_label = int(np.argmax(sizes))
+        objects = ndimage.find_objects(labels)
+        reference = objects[reference_label - 1]
+        if reference is None:
+            continue
+        reference_posterior_stop = int(reference[0].stop)
+
+        found = 0
+        for label, slices in enumerate(objects, start=1):
+            if slices is None or label == reference_label:
+                continue
+            if int(sizes[label]) < min_component_voxels:
+                continue
+            if int(slices[1].stop - slices[1].start) < min_component_width_voxels:
+                continue
+            if int(slices[0].start) < reference_posterior_stop + gap_rows:
+                continue
+            found += int(sizes[label])
+
+        if found:
+            suspicious_voxels += found
+            suspicious_slices.append(z_index)
+
+    return PosteriorIslandSurvey(
+        suspicious_voxel_count=suspicious_voxels,
+        suspicious_slice_indices=tuple(suspicious_slices),
     )
 
 
@@ -133,6 +208,8 @@ def review_patient_mask(
         if found:
             suspicious_slices.append(z_index)
 
+    posterior_islands = survey_posterior_mask_islands(selected)
+
     return MaskQaReport(
         voxel_count=count,
         volume_cm3=count * ct.geometry.voxel_volume_mm3 / 1000.0,
@@ -144,6 +221,8 @@ def review_patient_mask(
         posterior_survey_voxel_count=total_posterior_voxels,
         posterior_survey_slice_count=len(suspicious_slices),
         posterior_survey_slice_indices=tuple(suspicious_slices),
+        posterior_island_voxel_count=posterior_islands.suspicious_voxel_count,
+        posterior_island_slice_indices=posterior_islands.suspicious_slice_indices,
     )
 
 
