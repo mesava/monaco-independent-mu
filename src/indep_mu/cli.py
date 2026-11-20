@@ -268,6 +268,61 @@ def patient_diagnostics(
         click.echo(f"Local JSON: {output}")
 
 
+@main.command("patient-qc-png")
+@click.argument(
+    "dicom_directory",
+    type=click.Path(exists=True, file_okay=False, path_type=Path),
+)
+@click.argument(
+    "output_png",
+    type=click.Path(dir_okay=False, path_type=Path),
+)
+@click.option("--threshold-hu", type=float, default=-500.0, show_default=True)
+@click.option(
+    "--closing-iterations",
+    type=click.IntRange(min=0),
+    default=1,
+    show_default=True,
+)
+@click.option("--overwrite", is_flag=True)
+def patient_qc_png(
+    dicom_directory: Path,
+    output_png: Path,
+    threshold_hu: float,
+    closing_iterations: int,
+    overwrite: bool,
+) -> None:
+    """Создать локальную визуализацию external-mask для ручного QA."""
+
+    from indep_mu.patient_model.external_mask import derive_external_mask_from_ct
+    from indep_mu.patient_model.mask_preview import render_external_mask_montage
+    from indep_mu.workflow.patient_diagnostics import _load_case
+
+    try:
+        ct, isocenter = _load_case(dicom_directory)
+        derived = derive_external_mask_from_ct(
+            ct,
+            seed_patient_mm=isocenter,
+            threshold_hu=threshold_hu,
+            closing_iterations=closing_iterations,
+        )
+        slices = render_external_mask_montage(
+            ct,
+            derived.mask,
+            output_png,
+            overwrite=overwrite,
+        )
+    except (ValueError, OSError, RuntimeError) as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    click.echo(f"Local QC PNG: {output_png}")
+    click.echo(f"Selected CT slices: {slices}")
+    click.echo(
+        "RESEARCH ONLY. Inspect patient/table separation manually; "
+        "this is NOT automatic couch clearance."
+    )
+
+
 @main.command("build-patient")
 @click.argument(
     "dicom_directory",
