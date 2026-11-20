@@ -62,7 +62,8 @@ def test_couch_candidate_and_calibration_counts() -> None:
     assert report.posterior_survey_voxel_count == 3 * 2 * 5
     assert report.posterior_survey_slice_count == 3
     assert report.posterior_survey_slice_indices == (0, 1, 2)
-    assert not report.touches_ct_border
+    # Synthetic body occupies the first and last z-planes.
+    assert report.touches_ct_border
     assert report.support_review_status == "MANUAL_REVIEW_REQUIRED"
     assert not report.safe_to_assert_support_absent
 
