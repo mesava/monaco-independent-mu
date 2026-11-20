@@ -303,6 +303,7 @@ def test_build_patient_artifacts_with_explicit_ct_derived_mask(
         dicom,
         output,
         derive_external_from_isocenter=True,
+        acknowledge_unvalidated_external_mask=True,
         external_threshold_hu=-500.0,
         external_closing_iterations=0,
         mixture_bins=4,
@@ -339,3 +340,28 @@ def test_ct_derived_patient_diagnostics_on_synthetic_case(tmp_path: Path) -> Non
     assert result.above_calibration_count >= 0
     assert result.density_min_g_cm3 >= 0.0
     assert result.density_max_g_cm3 > 0.0
+
+
+
+def test_research_ct_mask_requires_explicit_risk_acknowledgement(
+    tmp_path: Path,
+) -> None:
+    dicom = tmp_path / "dicom-research"
+    output = tmp_path / "out-research"
+    dicom.mkdir()
+    _build_case(dicom)
+
+    import pytest
+
+    with pytest.raises(ValueError, match="research-only"):
+        build_patient_artifacts(
+            dicom,
+            output,
+            derive_external_from_isocenter=True,
+            external_threshold_hu=-500.0,
+            external_closing_iterations=0,
+            mixture_bins=4,
+            out_of_range="raise",
+        )
+
+    assert not (output / "patient.egsphant").exists()
