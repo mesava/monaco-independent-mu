@@ -141,26 +141,46 @@ def derive_external_mask_from_ct(
     seed_distance_mm = 0.0
 
     if selected_label == 0:
+        # Computing a global EDT with return_indices=True for a 512x512x187
+        # CT requires over 1 GB for the three index arrays alone. Instead
+        # search only the physical sphere permitted by max_seed_snap_distance.
+        # The nearest candidate within that radius is exactly the same
+        # Euclidean nearest neighbour as the full-volume EDT.
         row_spacing, column_spacing = ct.geometry.pixel_spacing_mm
-        distances, nearest = ndimage.distance_transform_edt(
-            ~candidate,
-            sampling=(
-                ct.geometry.slice_spacing_mm,
-                row_spacing,
-                column_spacing,
-            ),
-            return_indices=True,
+        sampling = np.asarray(
+            [ct.geometry.slice_spacing_mm, row_spacing, column_spacing],
+            dtype=np.float64,
         )
-        seed_distance_mm = float(distances[seed_index])
+        radius_voxels = np.ceil(max_seed_snap_distance_mm / sampling).astype(int)
+        starts = np.maximum(np.asarray(seed_index) - radius_voxels, 0)
+        stops = np.minimum(
+            np.asarray(seed_index) + radius_voxels + 1,
+            np.asarray(candidate.shape),
+        )
+        neighbourhood = tuple(
+            slice(int(start), int(stop))
+            for start, stop in zip(starts, stops)
+        )
+        candidate_indices = np.argwhere(candidate[neighbourhood])
+        if candidate_indices.size == 0:
+            raise ValueError(
+                "No thresholded patient component is sufficiently close to "
+                "the seed point."
+            )
+        global_indices = candidate_indices + starts[None, :]
+        deltas_mm = (
+            global_indices - np.asarray(seed_index)[None, :]
+        ) * sampling[None, :]
+        squared_distances = np.sum(deltas_mm * deltas_mm, axis=1)
+        nearest_offset = int(np.argmin(squared_distances))
+        seed_distance_mm = float(np.sqrt(squared_distances[nearest_offset]))
         if seed_distance_mm > max_seed_snap_distance_mm:
             raise ValueError(
                 "No thresholded patient component is sufficiently close to "
                 "the seed point."
             )
-
         nearest_index = tuple(
-            int(nearest[axis][seed_index])
-            for axis in range(3)
+            int(value) for value in global_indices[nearest_offset]
         )
         selected_label = int(labels[nearest_index])
         if selected_label == 0:
