@@ -316,6 +316,10 @@ def test_build_patient_artifacts_with_explicit_ct_derived_mask(
     derived = summary["patient_mask"]["ct_derived"]
     assert derived["validation_status"] == "RESEARCH_ONLY"
     assert derived["seed_patient_mm"] == [1.5, 1.5, 2.5]
+    assert derived["support_review_status"] == "MANUAL_REVIEW_REQUIRED"
+    assert derived["support_absence_proven"] is False
+    assert "posterior_island_voxels_inside_mask" in derived
+    assert "posterior_island_slice_indices" in derived
 
 
 
