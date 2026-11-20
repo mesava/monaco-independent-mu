@@ -7,6 +7,8 @@ from typing import Iterable
 import numpy as np
 import pydicom
 
+from .reader import dcmread_rt
+
 
 @dataclass(frozen=True)
 class BeamLimitingDeviceDefinition:
@@ -524,7 +526,7 @@ def load_rtplan(
     previous explicitly supplied state.
     """
 
-    dataset = pydicom.dcmread(path, force=False)
+    dataset = dcmread_rt(path)
     if getattr(dataset, "Modality", None) != "RTPLAN":
         raise ValueError("Input file is not an RT Plan.")
 
