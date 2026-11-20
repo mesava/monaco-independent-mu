@@ -95,6 +95,24 @@ contamination CT couch/support.
 По умолчанию она сравнивает -600/-500/-400 HU и показывает volume,
 seed-snap distance, out-of-calibration counts и border contact.
 
+## Обновление M1 quality workflow (20.11.2026)
+
+Реализованы:
+
+- безопасное чтение headerless implicit-VR Monaco DICOM;
+- локальный seed snap вместо глобального 3D EDT;
+- одна загрузка CT для трёх пороговых вариантов;
+- Dice, добавленные/удалённые voxels и относительный объём;
+- posterior survey для strictly axial HFS;
+- отдельная команда `patient-qc-png` для просмотра CT slices;
+- вывод локального QA JSON.
+
+В этом обновлении **не утверждается**, что независимый визуальный контроль
+стола/подложки завершён. Новые patient-specific числа и окончательный
+`.egsphant` не опубликованы до воспроизводимого прогона и проверки.
+
+Подробнее: `docs/m1_mask_quality.md`.
+
 ## Gate перед первым patient .egsphant
 
 Перед тем как считать .egsphant Case 001 validation artifact, требуется:
