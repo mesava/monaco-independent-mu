@@ -19,6 +19,7 @@ def render_external_mask_montage(
     output_png: str | Path,
     *,
     panel_count: int = 9,
+    priority_slice_indices: tuple[int, ...] = (),
     window_min_hu: float = -1000.0,
     window_max_hu: float = 700.0,
     overwrite: bool = False,
@@ -47,10 +48,38 @@ def render_external_mask_montage(
     if output.exists() and not overwrite:
         raise FileExistsError(f"Output image already exists: {output}")
 
-    # Equally spaced active slices are easier to reproduce than hand-picked
-    # slices. The reviewer must still inspect suspicious slices separately.
-    sample = np.linspace(0, active.size - 1, min(panel_count, active.size))
-    indices = tuple(int(active[int(np.rint(value))]) for value in sample)
+    # Preserve broad anatomical coverage, but also prioritize slices with
+    # posterior 2-D islands detected inside the connected 3-D mask.
+    # The islands are not automatically classified as couch.
+    baseline_count = panel_count if not priority_slice_indices else max(
+        1, panel_count // 2
+    )
+    baseline_sample = np.linspace(
+        0, active.size - 1, min(baseline_count, active.size)
+    )
+    chosen = {
+        int(active[int(np.rint(value))])
+        for value in baseline_sample
+    }
+
+    if priority_slice_indices:
+        candidates = sorted(
+            set(int(value) for value in priority_slice_indices)
+            & set(int(value) for value in active)
+        )
+        remaining = max(0, panel_count - len(chosen))
+        if candidates and remaining:
+            sample = np.linspace(0, len(candidates) - 1, min(remaining, len(candidates)))
+            chosen.update(candidates[int(np.rint(value))] for value in sample)
+
+    if len(chosen) < min(panel_count, active.size):
+        candidates = [int(value) for value in active if int(value) not in chosen]
+        remaining = min(panel_count, active.size) - len(chosen)
+        if candidates and remaining > 0:
+            sample = np.linspace(0, len(candidates) - 1, remaining)
+            chosen.update(candidates[int(np.rint(value))] for value in sample)
+
+    indices = tuple(sorted(chosen))
 
     try:
         import matplotlib
