@@ -46,6 +46,8 @@ class CtDerivedPatientDiagnostics:
     density_max_g_cm3: float
     posterior_survey_voxel_count: int
     posterior_survey_slice_count: int
+    posterior_island_voxel_count: int
+    posterior_island_slice_count: int
     support_review_status: str
     reference_threshold_hu: float | None = None
     dice_vs_reference: float | None = None
@@ -163,6 +165,8 @@ def _analyze_loaded(
             density_max_g_cm3=float(np.max(density)),
             posterior_survey_voxel_count=qa.posterior_survey_voxel_count,
             posterior_survey_slice_count=qa.posterior_survey_slice_count,
+            posterior_island_voxel_count=qa.posterior_island_voxel_count,
+            posterior_island_slice_count=len(qa.posterior_island_slice_indices),
             support_review_status=qa.support_review_status,
         ),
         mask,
