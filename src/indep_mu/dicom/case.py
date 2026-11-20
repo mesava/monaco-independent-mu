@@ -5,6 +5,8 @@ from pathlib import Path
 
 import pydicom
 
+from .reader import dcmread_rt
+
 
 @dataclass(frozen=True)
 class DicomObjectRef:
@@ -75,7 +77,7 @@ def _scan_dicom_objects(root: Path) -> tuple[DicomObjectRef, ...]:
 
     for path in sorted(item for item in root.rglob("*") if item.is_file()):
         try:
-            ds = pydicom.dcmread(path, stop_before_pixels=True, force=False)
+            ds = dcmread_rt(path, stop_before_pixels=True)
         except Exception:
             continue
 
@@ -106,7 +108,7 @@ def _scan_dicom_objects(root: Path) -> tuple[DicomObjectRef, ...]:
 
 
 def _referenced_ct_series_uids(rtstruct_path: Path) -> set[str]:
-    ds = pydicom.dcmread(rtstruct_path, stop_before_pixels=True, force=False)
+    ds = dcmread_rt(rtstruct_path, stop_before_pixels=True)
     result: set[str] = set()
 
     for frame in getattr(ds, "ReferencedFrameOfReferenceSequence", []) or []:
@@ -119,7 +121,7 @@ def _referenced_ct_series_uids(rtstruct_path: Path) -> set[str]:
 
 
 def _referenced_ct_sop_uids(rtstruct_path: Path) -> set[str]:
-    ds = pydicom.dcmread(rtstruct_path, stop_before_pixels=True, force=False)
+    ds = dcmread_rt(rtstruct_path, stop_before_pixels=True)
     result: set[str] = set()
 
     for roi_contour in getattr(ds, "ROIContourSequence", []) or []:
@@ -133,7 +135,7 @@ def _referenced_ct_sop_uids(rtstruct_path: Path) -> set[str]:
 
 
 def _rtplan_struct_uid(rtplan_path: Path) -> str | None:
-    ds = pydicom.dcmread(rtplan_path, stop_before_pixels=True, force=False)
+    ds = dcmread_rt(rtplan_path, stop_before_pixels=True)
     sequence = getattr(ds, "ReferencedStructureSetSequence", None)
     if not sequence:
         return None
@@ -143,7 +145,7 @@ def _rtplan_struct_uid(rtplan_path: Path) -> str | None:
 
 
 def _rtdose_plan_uids(rtdose_path: Path) -> set[str]:
-    ds = pydicom.dcmread(rtdose_path, stop_before_pixels=True, force=False)
+    ds = dcmread_rt(rtdose_path, stop_before_pixels=True)
     return {
         str(item.ReferencedSOPInstanceUID)
         for item in getattr(ds, "ReferencedRTPlanSequence", []) or []
