@@ -100,6 +100,7 @@ def build_patient_artifacts(
     *,
     patient_roi_name: str | None = None,
     derive_external_from_isocenter: bool = False,
+    acknowledge_unvalidated_external_mask: bool = False,
     external_threshold_hu: float = -500.0,
     external_closing_iterations: int = 1,
     mixture_bins: int,
@@ -124,6 +125,13 @@ def build_patient_artifacts(
         raise ValueError(
             "Choose exactly one patient-mask source: patient_roi_name or "
             "derive_external_from_isocenter=True."
+        )
+    if derive_external_from_isocenter and not acknowledge_unvalidated_external_mask:
+        raise ValueError(
+            "CT-derived external mask is research-only and not independently "
+            "validated for couch/support contamination. Supply "
+            "acknowledge_unvalidated_external_mask=True to generate a "
+            "research phantom; this does not authorize clinical use."
         )
     if mixture_bins < 1:
         raise ValueError("mixture_bins must be >= 1.")
