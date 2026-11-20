@@ -15,6 +15,7 @@ from indep_mu.patient_model.discretize import discretize_material_blends
 from indep_mu.patient_model.egsphant import write_egsphant
 from indep_mu.patient_model.external_mask import derive_external_mask_from_ct
 from indep_mu.patient_model.hu_red import DRT120KV
+from indep_mu.patient_model.mask_qc import review_patient_mask
 from indep_mu.patient_model.model import build_patient_model
 from indep_mu.patient_model.pegsless import (
     build_pegsless_media_set,
@@ -179,6 +180,13 @@ def build_patient_artifacts(
         patient_mask = derived.mask
         mask_source = "CT_DERIVED_RESEARCH"
         diagnostics = derived.diagnostics
+        support_qa = review_patient_mask(
+            ct,
+            patient_mask,
+            hu_min=DRT120KV.hu_min,
+            hu_max=DRT120KV.hu_max,
+            posterior_threshold_hu=external_threshold_hu,
+        )
         external_mask_summary = {
             "seed_patient_mm": list(diagnostics.seed_patient_mm),
             "threshold_hu": diagnostics.threshold_hu,
@@ -191,6 +199,24 @@ def build_patient_artifacts(
             "final_voxel_count": diagnostics.final_voxel_count,
             "touches_ct_border": diagnostics.touches_ct_border,
             "validation_status": "RESEARCH_ONLY",
+            "support_review_status": support_qa.support_review_status,
+            "support_absence_proven": support_qa.safe_to_assert_support_absent,
+            "posterior_survey_voxels_outside_mask": (
+                support_qa.posterior_survey_voxel_count
+            ),
+            "posterior_survey_slice_count": (
+                support_qa.posterior_survey_slice_count
+            ),
+            "posterior_island_voxels_inside_mask": (
+                support_qa.posterior_island_voxel_count
+            ),
+            "posterior_island_slice_indices": list(
+                support_qa.posterior_island_slice_indices
+            ),
+            "warning": (
+                "CT-derived mask can include couch and immobilization material. "
+                "This research phantom is NOT a validated patient model."
+            ),
         }
 
     model = build_patient_model(
