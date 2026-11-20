@@ -6,6 +6,8 @@ from pathlib import Path
 import numpy as np
 import pydicom
 
+from .reader import dcmread_rt
+
 from indep_mu.mu_check.dosegrid import RectilinearDoseGrid, trilinear_sample
 
 
@@ -235,7 +237,7 @@ def load_rtdose(
       transverse orientation.
     """
 
-    dataset = pydicom.dcmread(path, force=False)
+    dataset = dcmread_rt(path)
     if getattr(dataset, "Modality", None) != "RTDOSE":
         raise ValueError("Input file is not RT Dose.")
 
