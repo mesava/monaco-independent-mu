@@ -69,3 +69,21 @@ def test_qc_png_rejects_empty_mask(tmp_path: Path) -> None:
             np.zeros_like(mask),
             tmp_path / "empty.png",
         )
+
+
+
+def test_local_png_prioritizes_suspicious_axial_slices(tmp_path: Path) -> None:
+    pytest.importorskip("matplotlib")
+    ct, mask = _synthetic_ct()
+    dest = tmp_path / "priority_mask_preview.png"
+
+    indices = render_external_mask_montage(
+        ct,
+        mask,
+        dest,
+        panel_count=2,
+        priority_slice_indices=(3,),
+    )
+
+    assert indices == (1, 3)
+    assert dest.stat().st_size > 1000
