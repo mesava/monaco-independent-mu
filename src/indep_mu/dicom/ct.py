@@ -7,6 +7,8 @@ from typing import Iterable
 import numpy as np
 import pydicom
 
+from .reader import dcmread_rt
+
 
 @dataclass(frozen=True)
 class CtGeometry:
@@ -135,7 +137,7 @@ def load_ct_series(
     datasets: list[pydicom.dataset.Dataset] = []
     for path in sorted(p for p in root.rglob("*") if p.is_file()):
         try:
-            ds = pydicom.dcmread(path, stop_before_pixels=True, force=False)
+            ds = dcmread_rt(path, stop_before_pixels=True)
         except Exception:
             continue
         if getattr(ds, "Modality", None) == "CT":
@@ -253,7 +255,7 @@ def load_ct_series(
     sop_uids: list[str] = []
 
     for header in ordered:
-        ds = pydicom.dcmread(header.filename, force=False)
+        ds = dcmread_rt(header.filename)
         pixels = np.asarray(ds.pixel_array, dtype=np.float32)
         if pixels.shape != (rows, columns):
             raise ValueError(
