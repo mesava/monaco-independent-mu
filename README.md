@@ -134,6 +134,30 @@ independent MC должны явно совпадать как dose-to-medium л
 
 Подробности: docs/validation_case_001_dicom.md.
 
+### M1 — текущий контроль external mask
+
+Для оригинального Monaco экспорта добавлен консервативный reader
+headerless implicit-VR DICOM, поскольку некоторые экспортированные файлы не
+имеют стандартного DICM preamble. На поддерживаемые SOPClassUID/Modality
+налагается строгая проверка; произвольные бинарные файлы не принимаются.
+
+Для CT-derived external-mask теперь доступны:
+- threshold sensitivity с Dice и разностью вокселей относительно -500 HU;
+- counts внутри маски за измеренным HU диапазоном;
+- исследовательский survey плотных компонентов позади маски для axial HFS;
+- локальная PNG-монтажная сетка для обязательной ручной проверки.
+
+```text
+indep-mu patient-diagnostics <DICOM_DIR> --output <LOCAL_QA.json>
+indep-mu patient-qc-png <DICOM_DIR> <LOCAL_QA.png>
+```
+
+**Нулевой posterior-survey результат не подтверждает отсутствие стола.**
+Статус CT-derived маски остаётся `MANUAL_REVIEW_REQUIRED`.
+Пациентские PNG/JSON не публикуются в GitHub.
+
+Методика и критерии: `docs/m1_mask_quality.md`.
+
 ### Принцип независимости
 
 ```text
