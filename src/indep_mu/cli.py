@@ -233,7 +233,7 @@ def patient_diagnostics(
 
     click.echo(
         "threshold  volume_cm3  Dice_vs_ref  volume_delta_%  "
-        "out_low  out_high  posterior_vox  posterior_slices  border"
+        "out_low  out_high  posterior_out  posterior_in  border"
     )
     for item in rows:
         click.echo(
@@ -244,7 +244,7 @@ def patient_diagnostics(
             f"{item.below_calibration_count:7d}  "
             f"{item.above_calibration_count:8d}  "
             f"{item.posterior_survey_voxel_count:13d}  "
-            f"{item.posterior_survey_slice_count:16d}  "
+            f"{item.posterior_island_voxel_count:12d}  "
             f"{item.touches_ct_border}"
         )
     click.echo(
