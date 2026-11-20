@@ -6,6 +6,8 @@ from pathlib import Path
 import numpy as np
 import pydicom
 
+from .reader import dcmread_rt
+
 from .ct import CtSeries
 
 
@@ -34,7 +36,7 @@ class RoiMask:
 def list_rtstruct_rois(rtstruct_path: str | Path) -> tuple[RoiDefinition, ...]:
     """List RTSTRUCT ROI definitions without rasterizing contours."""
 
-    rtstruct = pydicom.dcmread(rtstruct_path, stop_before_pixels=True, force=False)
+    rtstruct = dcmread_rt(rtstruct_path, stop_before_pixels=True)
     if getattr(rtstruct, "Modality", None) != "RTSTRUCT":
         raise ValueError("Input file is not an RT Structure Set.")
 
@@ -140,7 +142,7 @@ def build_roi_mask(
     with XOR, as required by their geometric type.
     """
 
-    rtstruct = pydicom.dcmread(rtstruct_path, force=False)
+    rtstruct = dcmread_rt(rtstruct_path)
     if getattr(rtstruct, "Modality", None) != "RTSTRUCT":
         raise ValueError("Input file is not an RT Structure Set.")
 
